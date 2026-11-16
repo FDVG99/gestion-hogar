@@ -92,9 +92,17 @@
       abrirAppConToken(token, payload.email);
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
+      // Si Apps Script nos devolvió con ?reset=1, borramos el token viejo para evitar bucles
+      if (window.location.search.includes('reset=1')) {
+        localStorage.removeItem(STORAGE_KEY);
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
+
       const savedToken = localStorage.getItem(STORAGE_KEY);
       if (!savedToken) return;
+
       const payload = parseJwt(savedToken);
       const now = Math.floor(Date.now() / 1000);
       if (payload && payload.exp && payload.exp > (now + 60)) {
