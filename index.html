@@ -9,11 +9,12 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icono.png">
   <title>Gestión Hogar</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #0f172a; color: #f8fafc; }
+    html, body { width: 100%; height: 100%; background-color: #0f172a; color: #f8fafc; }
 
-    #launcherScreen {
+    #loginScreen {
       position: fixed; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; padding: 28px;
       text-align: center; background: #0f172a; z-index: 30;
@@ -26,58 +27,99 @@
     .icon-box img { width: 54px; height: 54px; object-fit: contain; }
     h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     p { font-size: 13px; color: #94a3b8; max-width: 290px; line-height: 1.5; margin-bottom: 28px; }
-    .btn-primary {
-      width: 100%; max-width: 280px; background: #10b981; color: #ffffff; border: none;
-      padding: 15px 24px; border-radius: 14px; font-size: 15px; font-weight: 700;
-      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
-      justify-content: center; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    .signin-wrap { display: flex; justify-content: center; min-height: 44px; }
+    #statusText { margin-top: 18px; font-size: 12px; color: #10b981; font-weight: 600; min-height: 18px; }
+    .btn-reset {
+      margin-top: 24px; background: transparent; border: none; color: #64748b;
+      font-size: 11px; text-decoration: underline; cursor: pointer; display: none;
     }
-    .btn-primary:active { transform: scale(0.98); }
-    .btn-secondary {
-      width: 100%; max-width: 280px; margin-top: 12px; background: #1e293b; color: #cbd5e1;
-      border: 1px solid #334155; padding: 12px 20px; border-radius: 14px; font-size: 13px;
-      font-weight: 600; cursor: pointer;
-    }
-    .hint { margin-top: 20px; font-size: 11px; color: #64748b; max-width: 270px; }
-
-    iframe {
-      position: fixed; inset: 0; border: none; width: 100%; height: 100%;
-      display: block; z-index: 20; background: #0f172a;
-    }
-    .hidden { display: none !important; }
   </style>
 </head>
 <body>
 
-  <div id="launcherScreen">
+  <div id="loginScreen">
     <div class="icon-box">
       <img src="icono.png" alt="Gestión Hogar" onerror="this.style.display='none'">
     </div>
     <h1>Finanzas del Hogar</h1>
-    <p>Control compartido de cuotas mensuales, recibos y pozo familiar.</p>
+    <p>Inicia sesión con tu cuenta Gmail familiar para acceder al pozo y recibos del mes.</p>
 
-    <a href="https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec" class="btn-primary">
-      Ingresar con mi cuenta Google
-    </a>
+    <div class="signin-wrap">
+      <div id="g_id_onload"
+           data-client_id="PEGA_AQUI_TU_CLIENT_ID"
+           data-context="signin"
+           data-ux_mode="popup"
+           data-callback="onGoogleSignIn"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-shape="pill"
+           data-theme="filled_black"
+           data-text="signin_with"
+           data-size="large"
+           data-logo_alignment="left">
+      </div>
+    </div>
 
-    <button onclick="abrirEnMarco()" class="btn-secondary">
-      Cargar en vista integrada (sin barra)
-    </button>
-
-    <span class="hint">Si usas iPhone o tienes varias cuentas Gmail en el teléfono, usa el botón verde.</span>
+    <div id="statusText"></div>
+    <button id="btnClearSession" class="btn-reset" onclick="cerrarSesionLocal()">Cambiar de cuenta Google</button>
   </div>
 
-  <iframe id="appFrame" class="hidden" allow="clipboard-read; clipboard-write"></iframe>
-
   <script>
+    const GOOGLE_CLIENT_ID = "252920345538-gq6c1c99ntsk88d9sj19jvjkre2mt1nd.apps.googleusercontent.com";
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec";
+    const STORAGE_KEY = "gestion_hogar_id_token";
 
-    function abrirEnMarco() {
-      document.getElementById('launcherScreen').classList.add('hidden');
-      const frame = document.getElementById('appFrame');
-      frame.classList.remove('hidden');
-      frame.src = APPS_SCRIPT_URL;
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join('')));
+      } catch (e) {
+        return null;
+      }
     }
+
+    function abrirAppConToken(token, email) {
+      document.getElementById('statusText').textContent = `Entrando como ${email}...`;
+      const destino = `${APPS_SCRIPT_URL}?token=${encodeURIComponent(token)}`;
+      window.location.replace(destino);
+    }
+
+    function onGoogleSignIn(response) {
+      const token = response.credential;
+      const payload = parseJwt(token);
+      if (!payload || !payload.email) {
+        document.getElementById('statusText').textContent = "Error al leer cuenta. Intenta de nuevo.";
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY, token);
+      abrirAppConToken(token, payload.email);
+    }
+
+    function cerrarSesionLocal() {
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById('statusText').textContent = "Sesión limpiada. Elige tu cuenta arriba.";
+      document.getElementById('btnClearSession').style.display = "none";
+    }
+
+    // Si ya inició sesión antes y el token de Google aún no expira (dura 1 hora), entra directo
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedToken = localStorage.getItem(STORAGE_KEY);
+      if (savedToken) {
+        const payload = parseJwt(savedToken);
+        const now = Math.floor(Date.now() / 1000);
+        if (payload && payload.exp && payload.exp > (now + 60)) {
+          document.getElementById('btnClearSession').style.display = "inline-block";
+          abrirAppConToken(savedToken, payload.email);
+        } else {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    });
   </script>
 </body>
 </html>
