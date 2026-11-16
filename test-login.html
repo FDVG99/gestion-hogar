@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba Google Sign-In</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a; color: #f8fafc; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px;
+    }
+    .card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+      padding: 28px; max-width: 360px; width: 100%; text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    h2 { margin-top: 0; font-size: 18px; }
+    p { font-size: 13px; color: #94a3b8; margin-bottom: 24px; }
+    #g_id_onload, .g_id_signin { display: flex; justify-content: center; }
+    #resultado {
+      margin-top: 24px; padding: 14px; border-radius: 12px;
+      background: #0f172a; border: 1px solid #10b981; text-align: left;
+      font-size: 13px; display: none; word-break: break-all;
+    }
+    .badge { color: #10b981; font-weight: bold; display: block; margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Prueba de Identidad Google</h2>
+    <p>Valida si captura tu correo y nombre sin mostrar advertencias de "App no verificada".</p>
+
+    <!-- Configuración del botón oficial de Google -->
+    <div id="g_id_onload"
+         data-client_id="252920345538-gq6c1c99ntsk88d9sj19jvjkre2mt1nd.apps.googleusercontent.com"
+         data-context="signin"
+         data-ux_mode="popup"
+         data-callback="handleCredentialResponse"
+         data-auto_prompt="false">
+    </div>
+
+    <div class="g_id_signin"
+         data-type="standard"
+         data-shape="rectangular"
+         data-theme="filled_black"
+         data-text="signin_with"
+         data-size="large"
+         data-logo_alignment="left">
+    </div>
+
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    // Decodifica el token JWT que devuelve Google al iniciar sesión
+    function parseJwt(token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      return JSON.parse(jsonPayload);
+    }
+
+    function handleCredentialResponse(response) {
+      const user = parseJwt(response.credential);
+      const box = document.getElementById('resultado');
+      box.style.display = 'block';
+      box.innerHTML = `
+        <span class="badge">✓ Sesión verificada</span>
+        <strong>Nombre:</strong> ${user.name}<br>
+        <strong>Correo:</strong> ${user.email}<br>
+        <strong>Verificado:</strong> ${user.email_verified ? 'Sí' : 'No'}
+      `;
+    }
+  </script>
+
+</body>
+</html>
