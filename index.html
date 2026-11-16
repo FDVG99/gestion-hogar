@@ -10,12 +10,81 @@
   <link rel="apple-touch-icon" href="icono.png">
   <title>Gestión Hogar</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #0f172a; }
-    iframe { border: none; width: 100%; height: 100%; display: block; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background-color: #0f172a; color: #f8fafc; }
+    
+    /* Pantalla de respaldo / bienvenida */
+    #fallbackScreen {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px;
+      text-align: center; background: #0f172a; z-index: 10;
+    }
+    .icon-box {
+      width: 72px; height: 72px; border-radius: 20px; background: #1e293b;
+      border: 1px solid #334155; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .icon-box img { width: 48px; height: 48px; object-fit: contain; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    p { font-size: 13px; color: #94a3b8; max-width: 290px; line-height: 1.5; margin-bottom: 24px; }
+    .btn-primary {
+      background: #10b981; color: #ffffff; border: none; padding: 14px 24px;
+      border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); transition: transform 0.15s;
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary {
+      margin-top: 14px; background: transparent; color: #94a3b8; border: 1px solid #334155;
+      padding: 10px 18px; border-radius: 12px; font-size: 12px; font-weight: 600;
+      text-decoration: none; display: inline-block;
+    }
+
+    iframe {
+      position: fixed; inset: 0; border: none; width: 100%; height: 100%;
+      display: block; z-index: 20; background: transparent;
+    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <iframe src="https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec" allow="clipboard-read; clipboard-write"></iframe>
+
+  <!-- Pantalla de respaldo si el navegador bloquea el iframe o falta sesión -->
+  <div id="fallbackScreen">
+    <div class="icon-box">
+      <img src="icono.png" alt="Gestión Hogar" onerror="this.style.display='none'">
+    </div>
+    <h1>Finanzas del Hogar</h1>
+    <p id="statusMsg">Cargando tu sesión familiar... Si la pantalla no avanza, abre la aplicación directamente con tu cuenta Google.</p>
+    <a id="directLink" href="https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec" class="btn-primary">Abrir Aplicación</a>
+    <a href="https://accounts.google.com" target="_blank" class="btn-secondary">Iniciar sesión en Google primero</a>
+  </div>
+
+  <!-- Contenedor principal para Android / PC -->
+  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+
+  <script>
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec";
+
+    const directLink = document.getElementById('directLink');
+    const appFrame = document.getElementById('appFrame');
+    const statusMsg = document.getElementById('statusMsg');
+
+    directLink.href = APPS_SCRIPT_URL;
+
+    // Detectar dispositivos Apple (iPhone / iPad) donde Safari bloquea cookies en iframes (Error 401)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+      appFrame.classList.add('hidden');
+      statusMsg.textContent = "En iPhone/iPad abrimos la app en modo directo para validar tu cuenta Google sin bloqueos.";
+      setTimeout(() => {
+        window.location.replace(APPS_SCRIPT_URL);
+      }, 600);
+    } else {
+      appFrame.src = APPS_SCRIPT_URL;
+    }
+  </script>
 </body>
 </html>
