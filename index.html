@@ -13,30 +13,32 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     html, body { width: 100%; height: 100%; overflow: hidden; background-color: #0f172a; color: #f8fafc; }
 
-    #fallbackScreen {
+    #launcherScreen {
       position: fixed; inset: 0; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; padding: 24px;
+      align-items: center; justify-content: center; padding: 28px;
       text-align: center; background: #0f172a; z-index: 30;
     }
     .icon-box {
-      width: 72px; height: 72px; border-radius: 20px; background: #1e293b;
+      width: 80px; height: 80px; border-radius: 22px; background: #1e293b;
       border: 1px solid #334155; display: flex; align-items: center; justify-content: center;
-      margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      margin-bottom: 20px; box-shadow: 0 12px 30px rgba(0,0,0,0.35);
     }
-    .icon-box img { width: 48px; height: 48px; object-fit: contain; }
-    h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-    p { font-size: 13px; color: #94a3b8; max-width: 300px; line-height: 1.5; margin-bottom: 24px; }
+    .icon-box img { width: 54px; height: 54px; object-fit: contain; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    p { font-size: 13px; color: #94a3b8; max-width: 290px; line-height: 1.5; margin-bottom: 28px; }
     .btn-primary {
-      background: #10b981; color: #ffffff; border: none; padding: 14px 26px;
-      border-radius: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+      width: 100%; max-width: 280px; background: #10b981; color: #ffffff; border: none;
+      padding: 15px 24px; border-radius: 14px; font-size: 15px; font-weight: 700;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+      justify-content: center; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
     }
+    .btn-primary:active { transform: scale(0.98); }
     .btn-secondary {
-      margin-top: 12px; background: #1e293b; color: #cbd5e1; border: 1px solid #334155;
-      padding: 11px 20px; border-radius: 12px; font-size: 12px; font-weight: 600;
-      text-decoration: none; display: inline-block;
+      width: 100%; max-width: 280px; margin-top: 12px; background: #1e293b; color: #cbd5e1;
+      border: 1px solid #334155; padding: 12px 20px; border-radius: 14px; font-size: 13px;
+      font-weight: 600; cursor: pointer;
     }
+    .hint { margin-top: 20px; font-size: 11px; color: #64748b; max-width: 270px; }
 
     iframe {
       position: fixed; inset: 0; border: none; width: 100%; height: 100%;
@@ -47,48 +49,34 @@
 </head>
 <body>
 
-  <!-- Pantalla de acceso seguro (visible al frente si Google rechaza el iframe) -->
-  <div id="fallbackScreen">
+  <div id="launcherScreen">
     <div class="icon-box">
       <img src="icono.png" alt="Gestión Hogar" onerror="this.style.display='none'">
     </div>
     <h1>Finanzas del Hogar</h1>
-    <p id="statusMsg">Si ves "rechazó la conexión" o tienes varias cuentas Gmail en tu celular, entra con el botón verde:</p>
-    <a id="directLink" href="https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec" class="btn-primary">Abrir Aplicación</a>
-    <button id="btnShowFrame" onclick="mostrarIframe()" class="btn-secondary">Ya inicié sesión, cargar aquí</button>
+    <p>Control compartido de cuotas mensuales, recibos y pozo familiar.</p>
+
+    <a href="https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec" class="btn-primary">
+      Ingresar con mi cuenta Google
+    </a>
+
+    <button onclick="abrirEnMarco()" class="btn-secondary">
+      Cargar en vista integrada (sin barra)
+    </button>
+
+    <span class="hint">Si usas iPhone o tienes varias cuentas Gmail en el teléfono, usa el botón verde.</span>
   </div>
 
-  <iframe id="appFrame" allow="clipboard-read; clipboard-write"></iframe>
+  <iframe id="appFrame" class="hidden" allow="clipboard-read; clipboard-write"></iframe>
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec";
-    const fallback = document.getElementById('fallbackScreen');
-    const appFrame = document.getElementById('appFrame');
 
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    function mostrarIframe() {
-      fallback.classList.add('hidden');
-      appFrame.src = APPS_SCRIPT_URL;
-    }
-
-    if (isIOS) {
-      document.getElementById('btnShowFrame').classList.add('hidden');
-      window.location.replace(APPS_SCRIPT_URL);
-    } else {
-      // Intenta cargar el iframe; si en 2.5s no completa o es bloqueado, el usuario tiene el botón al frente
-      appFrame.src = APPS_SCRIPT_URL;
-      appFrame.onload = function() {
-        try {
-          // Si el iframe cargó una página de error de Chrome/Google, mantenemos fallback visible
-          const doc = appFrame.contentDocument || appFrame.contentWindow.document;
-          if (doc && doc.body && doc.body.innerHTML === '') return;
-        } catch (e) {
-          // Cross-origin normal de script.google.com cuando sí conectó: ocultamos fallback
-          fallback.classList.add('hidden');
-        }
-      };
+    function abrirEnMarco() {
+      document.getElementById('launcherScreen').classList.add('hidden');
+      const frame = document.getElementById('appFrame');
+      frame.classList.remove('hidden');
+      frame.src = APPS_SCRIPT_URL;
     }
   </script>
 </body>
