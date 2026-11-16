@@ -1,0 +1,18 @@
+{
+  "name": "Gestión Hogar - Finanzas",
+  "short_name": "Gestión Hogar",
+  "start_url": "https://script.google.com/macros/s/AKfycbzbqRvCNyvlbhj7xxL9Ckwca2hbLI9Agn3ToIqM4vzSB7pDEuRWi9BQESlI5Oy9wMV5WQ/exec",
+  "scope": "/gestion-hogar/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/10473/10473642.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
