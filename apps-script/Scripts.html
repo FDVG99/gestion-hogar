@@ -1,0 +1,783 @@
+<script>
+  let appState = null;
+  let editContext = null; // { type: 'cuota' | 'gasto', id }
+
+  // Helper Promesa para llamadas limpias a Apps Script
+  function runServer(funcName, ...args) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)[funcName](...args);
+    });
+  }
+
+  function showLoader(text = 'Guardando cambios...') {
+    document.getElementById('loaderText').textContent = text;
+    document.getElementById('loaderOverlay').classList.remove('hidden');
+  }
+
+  function hideLoader() {
+    document.getElementById('loaderOverlay').classList.add('hidden');
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 2600);
+  }
+
+  function formatPEN(val) {
+    return 'S/ ' + (Number(val) || 0).toFixed(2);
+  }
+
+  function getTodayStr() {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  }
+
+  // Inicialización al cargar DOM
+  document.addEventListener('DOMContentLoaded', async () => {
+    await refreshData(true);
+  });
+
+async function refreshData(initial = false) {
+    try {
+      showLoader(initial ? 'Verificando acceso y cargando datos...' : 'Actualizando datos...');
+      if (initial) {
+        appState = await runServer('autenticarYCargarApp', INITIAL_ID_TOKEN);
+        if (appState && appState.currentUser) {
+          LOGGED_USER_EMAIL = appState.currentUser.email;
+        }
+      } else {
+        appState = await runServer('getAppData', LOGGED_USER_EMAIL);
+      }
+      renderAll();
+      if (!initial) showToast('Datos actualizados');
+    } catch (err) {
+      alert('Acceso denegado: ' + err.message);
+      window.top.location.href = 'https://fdvg99.github.io/gestion-hogar/?reset=1';
+    } finally {
+      hideLoader();
+    }
+  }
+
+  let analiticaCache = null;
+  let pozoChartInstance = null;
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+    document.getElementById('view-' + tabName).classList.remove('hidden');
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.remove('active', 'text-emerald-600');
+      btn.classList.add('text-slate-400');
+    });
+
+    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+    activeBtn.classList.add('active', 'text-emerald-600');
+    activeBtn.classList.remove('text-slate-400');
+
+    if (tabName === 'analitica') {
+      cargarVistaAnalitica();
+    }
+  }
+
+  function renderAll() {
+    if (!appState) return;
+    const { currentUser, familia, activePeriodo, cuotas, gastos, historialPeriodos } = appState;
+
+    // Header
+    document.getElementById('headerMesAnio').textContent = activePeriodo.mesAnio;
+    const resp = familia.find(f => f.id === activePeriodo.responsableId);
+    document.getElementById('headerResponsable').textContent = resp ? `${resp.nombre} (${resp.rol})` : activePeriodo.responsableId;
+    document.getElementById('headerCurrentUser').textContent = currentUser ? currentUser.nombre : 'Familiar';
+
+    // Cálculos financieros
+    const totalCuotasAsignadas = cuotas.reduce((acc, c) => acc + c.monto, 0);
+    const totalCuotasPagadas = cuotas.filter(c => c.pagado).reduce((acc, c) => acc + c.monto, 0);
+    const cuotasPagadasCount = cuotas.filter(c => c.pagado).length;
+
+    const totalGastosProyectados = gastos.reduce((acc, g) => acc + g.monto, 0);
+    const totalGastosPagados = gastos.filter(g => g.pagado).reduce((acc, g) => acc + g.monto, 0);
+    const gastosPagadosCount = gastos.filter(g => g.pagado).length;
+
+    const pozoActual = activePeriodo.saldoAnterior + totalCuotasPagadas - totalGastosPagados;
+
+    // KPIs Resumen
+    document.getElementById('kpiPozoActual').textContent = formatPEN(pozoActual);
+    document.getElementById('kpiSaldoAnterior').textContent = formatPEN(activePeriodo.saldoAnterior);
+    document.getElementById('kpiRecaudado').textContent = '+ ' + formatPEN(totalCuotasPagadas);
+    document.getElementById('kpiPagado').textContent = '- ' + formatPEN(totalGastosPagados);
+
+    document.getElementById('resumenCuotasCount').textContent = `${cuotasPagadasCount} / ${cuotas.length}`;
+    document.getElementById('resumenCuotasMonto').textContent = `${formatPEN(totalCuotasPagadas)} de ${formatPEN(totalCuotasAsignadas)}`;
+    document.getElementById('resumenGastosCount').textContent = `${gastosPagadosCount} / ${gastos.length}`;
+    document.getElementById('resumenGastosMonto').textContent = `${formatPEN(totalGastosPagados)} de ${formatPEN(totalGastosProyectados)}`;
+
+    // Alerta de Cobertura (Cuotas Asignadas vs Gastos Proyectados)
+    const diffCobertura = totalCuotasAsignadas - totalGastosProyectados;
+    const alertaBox = document.getElementById('alertaCobertura');
+    const alertaIcon = document.getElementById('alertaIcon');
+    const alertaTitulo = document.getElementById('alertaTitulo');
+    const alertaDetalle = document.getElementById('alertaDetalle');
+
+    if (totalGastosProyectados === 0) {
+      alertaBox.className = 'rounded-2xl p-4 border border-slate-200 flex items-start gap-3 bg-white shadow-sm';
+      alertaIcon.className = 'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-slate-100 text-slate-500';
+      alertaTitulo.textContent = 'Sin recibos registrados aún';
+      alertaDetalle.textContent = `Cuotas base suman ${formatPEN(totalCuotasAsignadas)}. Ingresa los recibos del mes en "Gastos" para validar cobertura.`;
+    } else if (diffCobertura >= 0) {
+      alertaBox.className = 'rounded-2xl p-4 border border-emerald-200 flex items-start gap-3 bg-emerald-50/70 shadow-sm';
+      alertaIcon.className = 'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500 text-white';
+      alertaTitulo.textContent = `Cuotas cubren los gastos (+${formatPEN(diffCobertura)})`;
+      alertaDetalle.textContent = `Las cuotas (${formatPEN(totalCuotasAsignadas)}) alcanzan para cubrir los ${formatPEN(totalGastosProyectados)} de gastos y dejan excedente para el pozo.`;
+    } else {
+      alertaBox.className = 'rounded-2xl p-4 border border-amber-300 flex items-start gap-3 bg-amber-50 shadow-sm';
+      alertaIcon.className = 'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-amber-500 text-white';
+      alertaTitulo.textContent = `Déficit del mes: ${formatPEN(Math.abs(diffCobertura))}`;
+      alertaDetalle.textContent = `Los gastos (${formatPEN(totalGastosProyectados)}) superan las cuotas (${formatPEN(totalCuotasAsignadas)}). Puedes ajustar cuotas o cubrir con el pozo anterior.`;
+    }
+
+    // Tendencia vs. Mes Anterior (excluye el mismo periodo activo para evitar autocomparación)
+    const ultimoCierre = (historialPeriodos || []).find(h => h.id !== activePeriodo.id) || null;
+    const badgeMesEl = document.getElementById('tendenciaBadgeMes');
+    const gastoActualEl = document.getElementById('tendenciaGastoActual');
+    const gastoDiffEl = document.getElementById('tendenciaGastoDiff');
+    const pozoVarEl = document.getElementById('tendenciaPozoVar');
+    const pozoPorcEl = document.getElementById('tendenciaPozoPorc');
+
+    const gastoComparar = totalGastosPagados > 0 ? totalGastosPagados : totalGastosProyectados;
+    gastoActualEl.textContent = formatPEN(gastoComparar);
+
+    if (ultimoCierre) {
+      badgeMesEl.textContent = `vs. ${ultimoCierre.mesAnio}`;
+      const diffGasto = gastoComparar - (Number(ultimoCierre.totalGastos) || 0);
+
+      if (Math.abs(diffGasto) < 0.01) {
+        gastoDiffEl.className = 'text-[11px] font-semibold text-slate-500 mt-1 flex items-center gap-1';
+        gastoDiffEl.innerHTML = `<i class="fa-solid fa-minus"></i> Igual que ${ultimoCierre.mesAnio.split(' ')[0]}`;
+      } else if (diffGasto < 0) {
+        gastoDiffEl.className = 'text-[11px] font-semibold text-emerald-600 mt-1 flex items-center gap-1';
+        gastoDiffEl.innerHTML = `<i class="fa-solid fa-arrow-trend-down"></i> -${formatPEN(Math.abs(diffGasto))} menos`;
+      } else {
+        gastoDiffEl.className = 'text-[11px] font-semibold text-amber-600 mt-1 flex items-center gap-1';
+        gastoDiffEl.innerHTML = `<i class="fa-solid fa-arrow-trend-up"></i> +${formatPEN(diffGasto)} más`;
+      }
+    } else {
+      badgeMesEl.textContent = 'Primer periodo';
+      gastoDiffEl.className = 'text-[11px] font-semibold text-slate-400 mt-1';
+      gastoDiffEl.textContent = 'Sin mes previo cerrado';
+    }
+
+    // Variación neta del pozo en el periodo activo
+    const variacionPozo = pozoActual - activePeriodo.saldoAnterior;
+    pozoVarEl.textContent = `${variacionPozo >= 0 ? '+' : '-'}${formatPEN(Math.abs(variacionPozo))}`;
+    pozoVarEl.className = `text-sm font-extrabold mt-0.5 ${variacionPozo >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+
+    if (activePeriodo.saldoAnterior > 0) {
+      const pct = ((variacionPozo / activePeriodo.saldoAnterior) * 100).toFixed(1);
+      pozoPorcEl.textContent = `${variacionPozo >= 0 ? '+' : ''}${pct}% sobre el pozo`;
+    } else {
+      pozoPorcEl.textContent = 'Saldo neto del mes';
+    }
+
+    // Mostrar acceso directo a Cierre cuando todas las cuotas y gastos están al 100%
+    const ctaCierreEl = document.getElementById('ctaListoCierre');
+    const todoCompletado = cuotas.length > 0 && gastos.length > 0 &&
+                           cuotasPagadasCount === cuotas.length &&
+                           gastosPagadosCount === gastos.length;
+    if (todoCompletado) {
+      ctaCierreEl.classList.remove('hidden');
+    } else {
+      ctaCierreEl.classList.add('hidden');
+    }
+
+    // Render Vista Cuotas
+    document.getElementById('badgeTotalCuotas').textContent = formatPEN(totalCuotasAsignadas);
+    document.getElementById('listaCuotas').innerHTML = cuotas.map(c => {
+      const member = familia.find(f => f.id === c.integranteId);
+      return `
+        <div class="bg-white p-3.5 rounded-2xl border ${c.pagado ? 'border-emerald-200 bg-emerald-50/20' : 'border-slate-200'} shadow-2xs flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <button onclick="toggleCuotaPagado('${c.id}', ${c.monto}, ${!c.pagado})" class="w-8 h-8 rounded-full flex items-center justify-center border-2 transition ${c.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-transparent hover:border-emerald-400'}">
+              <i class="fa-solid fa-check text-xs"></i>
+            </button>
+            <div>
+              <p class="text-sm font-bold text-slate-800">${c.nombre} <span class="text-[11px] font-normal text-slate-400">(${member ? member.rol : ''})</span></p>
+              <p class="text-[11px] ${c.pagado ? 'text-emerald-600 font-medium' : 'text-slate-400'}">
+                ${c.pagado ? 'Pagado el ' + c.fechaPago : 'Pendiente de aporte'}
+              </p>
+            </div>
+          </div>
+          <button onclick="openEditMonto('cuota', '${c.id}', 'Cuota de ${c.nombre}', ${c.monto}, ${c.pagado})" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition">
+            ${formatPEN(c.monto)}
+            <i class="fa-solid fa-pen text-[10px] text-slate-400"></i>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    // Render Vista Gastos
+    const generales = gastos.filter(g => ['Agua', 'Luz', 'Internet'].includes(g.categoria));
+    const gasPisos = gastos.filter(g => g.categoria === 'Gas');
+    const extras = gastos.filter(g => g.categoria === 'Extra');
+
+    document.getElementById('listaServiciosGenerales').innerHTML = generales.map(g => renderGastoItem(g, false)).join('');
+    document.getElementById('listaGasPisos').innerHTML = gasPisos.map(g => renderGastoItem(g, false)).join('');
+    document.getElementById('listaGastosExtras').innerHTML = extras.length
+      ? extras.map(g => renderGastoItem(g, true)).join('')
+      : `<p class="text-xs text-slate-400 bg-white p-3 rounded-xl border border-dashed border-slate-200 text-center">Sin gastos extraordinarios este mes.</p>`;
+
+    // Render Vista Cierre
+    document.getElementById('cierreSaldoAnt').textContent = formatPEN(activePeriodo.saldoAnterior);
+    document.getElementById('cierreIngresos').textContent = '+ ' + formatPEN(totalCuotasPagadas);
+    document.getElementById('cierreGastos').textContent = '- ' + formatPEN(totalGastosPagados);
+    document.getElementById('cierreTotalTransferir').textContent = formatPEN(pozoActual);
+
+    const selectResp = document.getElementById('selectNuevoResponsable');
+    selectResp.innerHTML = familia.map(f =>
+      `<option value="${f.id}" ${f.id === activePeriodo.responsableId ? 'selected' : ''}>${f.nombre} (${f.rol})</option>`
+    ).join('');
+
+    // Historial de periodos cerrados
+    document.getElementById('listaHistorial').innerHTML = historialPeriodos.length
+      ? historialPeriodos.map(h => {
+          const rHist = familia.find(f => f.id === h.responsableId);
+          return `
+            <div onclick="verDetalleHistorico('${h.id}')" class="bg-white p-3.5 rounded-2xl border border-slate-200 hover:border-emerald-400 active:scale-[0.99] transition cursor-pointer flex items-center justify-between text-xs shadow-2xs">
+              <div>
+                <p class="font-bold text-slate-800 flex items-center gap-1.5">
+                  ${h.mesAnio}
+                  <span class="text-[10px] font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Ver detalle</span>
+                </p>
+                <p class="text-slate-500 mt-0.5">Admin: ${rHist ? rHist.nombre : h.responsableId} · Cerrado ${h.fechaCierre}</p>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <div class="text-right">
+                  <p class="text-[10px] text-slate-400">Saldo Transferido</p>
+                  <p class="font-bold text-emerald-600 text-sm">${formatPEN(h.saldoCierre)}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+              </div>
+            </div>
+          `;
+        }).join('')
+      : `<p class="text-xs text-slate-400 bg-white p-3 rounded-xl border border-slate-200 text-center">Aún no hay meses cerrados en el historial.</p>`;
+  }
+
+  function renderGastoItem(g, isExtra) {
+    return `
+      <div class="bg-white p-3 rounded-2xl border ${g.pagado ? 'border-emerald-200' : 'border-slate-200'} flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleGastoPagado('${g.id}', ${g.monto}, ${!g.pagado})" class="w-7 h-7 rounded-full flex items-center justify-center border transition ${g.pagado ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-transparent hover:border-emerald-400'}">
+            <i class="fa-solid fa-check text-xs"></i>
+          </button>
+          <div>
+            <p class="text-xs font-bold text-slate-800">${g.descripcion}</p>
+            <p class="text-[10px] text-slate-400">${g.subcategoria} • ${g.pagado ? 'Pagado' : 'Pendiente'}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="openEditMonto('gasto', '${g.id}', '${g.descripcion}', ${g.monto}, ${g.pagado})" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1">
+            ${formatPEN(g.monto)} <i class="fa-solid fa-pen text-[9px] text-slate-400"></i>
+          </button>
+          ${isExtra ? `<button onclick="eliminarExtra('${g.id}')" class="w-7 h-7 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center"><i class="fa-solid fa-trash text-[10px]"></i></button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Acciones Optimistas (0 ms de espera visual)
+  async function toggleCuotaPagado(id, monto, pagado) {
+    const item = appState.cuotas.find(c => c.id === id);
+    if (!item) return;
+    const prev = { ...item };
+
+    item.pagado = pagado;
+    item.fechaPago = pagado ? (item.fechaPago || getTodayStr()) : '';
+    renderAll();
+
+    const t0 = performance.now();
+    try {
+      const res = await runServer('updateCuota', id, monto, pagado);
+      item.fechaPago = res.fechaPago;
+      renderAll();
+      const ms = Math.round(performance.now() - t0);
+      showToast(`Sincronizado (${(ms / 1000).toFixed(2)}s)`);
+    } catch (e) {
+      Object.assign(item, prev);
+      renderAll();
+      alert('No se pudo guardar en Sheets: ' + e.message);
+    }
+  }
+
+  async function toggleGastoPagado(id, monto, pagado) {
+    const item = appState.gastos.find(g => g.id === id);
+    if (!item) return;
+    const prev = { ...item };
+
+    item.pagado = pagado;
+    item.fechaPago = pagado ? (item.fechaPago || getTodayStr()) : '';
+    renderAll();
+
+    const t0 = performance.now();
+    try {
+      const res = await runServer('updateGasto', id, monto, pagado, null);
+      item.fechaPago = res.fechaPago;
+      renderAll();
+      const ms = Math.round(performance.now() - t0);
+      showToast(`Sincronizado (${(ms / 1000).toFixed(2)}s)`);
+    } catch (e) {
+      Object.assign(item, prev);
+      renderAll();
+      alert('No se pudo guardar en Sheets: ' + e.message);
+    }
+  }
+
+  function openEditMonto(type, id, title, currentMonto, pagado) {
+    editContext = { type, id };
+    document.getElementById('modalEditTitle').textContent = title;
+    document.getElementById('inputEditMonto').value = currentMonto || '';
+    document.getElementById('checkEditPagado').checked = Boolean(pagado);
+    document.getElementById('labelEditPagado').textContent =
+      type === 'cuota' ? 'Aporte ya pagado / recibido' : 'Recibo o gasto ya pagado';
+
+    const modal = document.getElementById('modalEditMonto');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    setTimeout(() => document.getElementById('inputEditMonto').focus(), 100);
+  }
+
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  async function confirmarEditMonto() {
+    if (!editContext) return;
+    const nuevoMonto = parseFloat(document.getElementById('inputEditMonto').value) || 0;
+    const estaPagado = document.getElementById('checkEditPagado').checked;
+    const { type, id } = editContext;
+    closeModal('modalEditMonto');
+
+    const list = type === 'cuota' ? appState.cuotas : appState.gastos;
+    const item = list.find(x => x.id === id);
+    if (!item) return;
+    const prev = { ...item };
+
+    // 1. UI instantánea
+    item.monto = nuevoMonto;
+    item.pagado = estaPagado;
+    item.fechaPago = estaPagado ? (item.fechaPago || getTodayStr()) : '';
+    renderAll();
+
+    // 2. Guardado en servidor
+    const t0 = performance.now();
+    try {
+      const fn = type === 'cuota' ? 'updateCuota' : 'updateGasto';
+      const args = type === 'cuota' ? [id, nuevoMonto, estaPagado] : [id, nuevoMonto, estaPagado, null];
+      const res = await runServer(fn, ...args);
+      item.fechaPago = res.fechaPago;
+      renderAll();
+      const ms = Math.round(performance.now() - t0);
+      showToast(`Guardado (${(ms / 1000).toFixed(2)}s)`);
+    } catch (e) {
+      Object.assign(item, prev);
+      renderAll();
+      alert('Error al guardar: ' + e.message);
+    }
+  }
+
+  function openModalExtra() {
+    document.getElementById('inputExtraDesc').value = '';
+    document.getElementById('inputExtraMonto').value = '';
+    document.getElementById('checkExtraPagado').checked = true;
+    const modal = document.getElementById('modalNuevoExtra');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  async function confirmarNuevoExtra() {
+    const desc = document.getElementById('inputExtraDesc').value.trim();
+    const monto = parseFloat(document.getElementById('inputExtraMonto').value) || 0;
+    const pagado = document.getElementById('checkExtraPagado').checked;
+
+    if (!desc || monto <= 0) {
+      alert('Ingresa una descripción y un monto mayor a 0.');
+      return;
+    }
+
+    closeModal('modalNuevoExtra');
+    const tempId = 'TEMP-' + Date.now();
+    const tempGasto = {
+      id: tempId,
+      periodoId: appState.activePeriodo.id,
+      categoria: 'Extra',
+      subcategoria: 'Eventual',
+      descripcion: desc,
+      monto,
+      pagado,
+      fechaPago: pagado ? getTodayStr() : ''
+    };
+
+    // 1. Agregar visualmente al instante
+    appState.gastos.push(tempGasto);
+    renderAll();
+
+    // 2. Persistir y reemplazar ID temporal por ID real
+    const t0 = performance.now();
+    try {
+      const res = await runServer('addGastoExtra', appState.activePeriodo.id, desc, monto, pagado);
+      const idx = appState.gastos.findIndex(g => g.id === tempId);
+      if (idx !== -1) appState.gastos[idx] = res.gasto;
+      renderAll();
+      const ms = Math.round(performance.now() - t0);
+      showToast(`Gasto agregado (${(ms / 1000).toFixed(2)}s)`);
+    } catch (e) {
+      appState.gastos = appState.gastos.filter(g => g.id !== tempId);
+      renderAll();
+      alert('Error al agregar gasto: ' + e.message);
+    }
+  }
+
+  async function eliminarExtra(id) {
+    if (!confirm('¿Eliminar este gasto extraordinario?')) return;
+    const idx = appState.gastos.findIndex(g => g.id === id);
+    if (idx === -1) return;
+    const backup = appState.gastos[idx];
+
+    appState.gastos.splice(idx, 1);
+    renderAll();
+
+    const t0 = performance.now();
+    try {
+      await runServer('deleteGastoExtra', id);
+      const ms = Math.round(performance.now() - t0);
+      showToast(`Eliminado (${(ms / 1000).toFixed(2)}s)`);
+    } catch (e) {
+      appState.gastos.splice(idx, 0, backup);
+      renderAll();
+      alert('Error al eliminar: ' + e.message);
+    }
+  }
+
+  async function ejecutarCierreMes() {
+    const nuevoMes = document.getElementById('inputNuevoMes').value.trim();
+    const nuevoRespId = document.getElementById('selectNuevoResponsable').value;
+
+    if (!nuevoMes) {
+      alert('Escribe el nombre del siguiente periodo (ejemplo: Diciembre 2026).');
+      return;
+    }
+
+    const respObj = appState.familia.find(f => f.id === nuevoRespId);
+    const ok = confirm(`¿Confirmas cerrar "${appState.activePeriodo.mesAnio}" y transferir el saldo acumulado a ${respObj.nombre} para iniciar "${nuevoMes}"?`);
+    if (!ok) return;
+
+    try {
+      showLoader('Cerrando mes y transfiriendo pozo...');
+      appState = await runServer('cerrarMesYTransferir', appState.activePeriodo.id, nuevoMes, nuevoRespId, LOGGED_USER_EMAIL);
+      document.getElementById('inputNuevoMes').value = '';
+      switchTab('resumen');
+      renderAll();
+      showToast('Mes cerrado y pozo transferido');
+    } catch (e) {
+      alert('Error al cerrar mes: ' + e.message);
+    } finally {
+      hideLoader();
+    }
+  }
+  async function verDetalleHistorico(periodoId) {
+    const periodo = appState.historialPeriodos.find(p => p.id === periodoId);
+    if (!periodo) return;
+
+    try {
+      showLoader('Cargando detalle del mes...');
+      const detalle = await runServer('getDetallePeriodo', periodoId);
+      const resp = appState.familia.find(f => f.id === periodo.responsableId);
+
+      document.getElementById('histModalTitulo').textContent = periodo.mesAnio;
+      document.getElementById('histModalSubtitulo').textContent =
+        `Responsable: ${resp ? resp.nombre : periodo.responsableId} • Cerrado el ${periodo.fechaCierre}`;
+
+      document.getElementById('histSaldoAnt').textContent = formatPEN(periodo.saldoAnterior);
+      document.getElementById('histIngresos').textContent = '+ ' + formatPEN(periodo.totalIngresos);
+      document.getElementById('histGastos').textContent = '- ' + formatPEN(periodo.totalGastos);
+      document.getElementById('histSaldoCierre').textContent = formatPEN(periodo.saldoCierre);
+
+      document.getElementById('histListaCuotas').innerHTML = detalle.cuotas.map(c => `
+        <div class="bg-white px-3 py-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="font-bold text-slate-800">${c.nombre}</p>
+            <p class="text-[10px] ${c.pagado ? 'text-emerald-600' : 'text-slate-400'}">
+              ${c.pagado ? 'Pagado ' + c.fechaPago : 'No aportado'}
+            </p>
+          </div>
+          <span class="font-bold ${c.pagado ? 'text-slate-800' : 'text-slate-400 line-through'}">${formatPEN(c.monto)}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('histListaGastos').innerHTML = detalle.gastos.map(g => `
+        <div class="bg-white px-3 py-2.5 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="font-bold text-slate-800">${g.descripcion}</p>
+            <p class="text-[10px] text-slate-400">${g.subcategoria} • ${g.pagado ? 'Pagado ' + g.fechaPago : 'Sin pagar'}</p>
+          </div>
+          <span class="font-bold ${g.pagado ? 'text-slate-800' : 'text-slate-400'}">${formatPEN(g.monto)}</span>
+        </div>
+      `).join('');
+
+      const modal = document.getElementById('modalDetalleHistorico');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    } catch (e) {
+      alert('Error al cargar el historial: ' + e.message);
+    } finally {
+      hideLoader();
+    }
+  }
+async function cargarVistaAnalitica() {
+    try {
+      if (!analiticaCache) {
+        showLoader('Calculando métricas históricas...');
+        analiticaCache = await runServer('getAnaliticaData');
+      }
+      renderAnalitica(analiticaCache);
+    } catch (e) {
+      alert('No se pudo cargar la analítica: ' + e.message);
+    } finally {
+      hideLoader();
+    }
+  }
+
+  let filtroGraficoActual = 'GLOBAL';
+
+  function seleccionarFiltroGrafico(clave) {
+    filtroGraficoActual = clave;
+
+    // Actualizar estilos de los chips superiores
+    document.querySelectorAll('.chip-analitica').forEach(btn => {
+      const esActivo = btn.getAttribute('data-filtro') === clave;
+      btn.className = esActivo
+        ? 'chip-analitica active shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold bg-slate-900 text-white transition'
+        : 'chip-analitica shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+    });
+
+    dibujarGraficoAnalitica();
+  }
+
+  function dibujarGraficoAnalitica() {
+    if (!analiticaCache) return;
+    const { serieMensual, mesesValidosLabels, seriesPorServicio } = analiticaCache;
+
+    const ctx = document.getElementById('chartEvolucionPozo').getContext('2d');
+    if (pozoChartInstance) pozoChartInstance.destroy();
+
+    const tituloEl = document.getElementById('tituloGraficoAnalitica');
+    const statsBox = document.getElementById('statsServicioSeleccionado');
+
+    // MODO 1: Vista Global (Pozo vs Gastos)
+    if (filtroGraficoActual === 'GLOBAL' || !seriesPorServicio[filtroGraficoActual]) {
+      tituloEl.textContent = 'Evolución Pozo vs. Gastos';
+      statsBox.classList.add('hidden');
+
+      const labels = serieMensual.map(p => p.mesAnio.split(' ')[0].substring(0, 3));
+      const pozoData = serieMensual.map(p => p.saldoCierre);
+      const gastosData = serieMensual.map(p => p.totalGastos);
+
+      pozoChartInstance = new Chart(ctx, {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: 'line',
+              label: 'Pozo Final',
+              data: pozoData,
+              borderColor: '#059669',
+              backgroundColor: '#059669',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 3.5
+            },
+            {
+              type: 'bar',
+              label: 'Gastos Mes',
+              data: gastosData,
+              backgroundColor: 'rgba(148, 163, 184, 0.35)',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 10, font: { size: 11, weight: '600' } }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: {
+              beginAtZero: false,
+              grid: { color: '#f1f5f9' },
+              ticks: { font: { size: 10 }, callback: v => 'S/' + v }
+            }
+          }
+        }
+      });
+      return;
+    }
+
+    // MODO 2: Tendencia de un Servicio Específico
+    const serieSrv = seriesPorServicio[filtroGraficoActual];
+    tituloEl.textContent = `Tendencia: ${filtroGraficoActual}`;
+    statsBox.classList.remove('hidden');
+
+    document.getElementById('statSrvMin').textContent = formatPEN(serieSrv.minimo);
+    document.getElementById('statSrvProm').textContent = formatPEN(serieSrv.promedio);
+    document.getElementById('statSrvMax').textContent = formatPEN(serieSrv.maximo);
+
+    const coloresServicio = {
+      'Luz (Enel)': '#f59e0b',
+      'Agua (Sedapal)': '#0284c7',
+      'Internet (Win)': '#6366f1',
+      'Gas (Total 4 Pisos)': '#10b981'
+    };
+    const colorLinea = coloresServicio[filtroGraficoActual] || '#0f172a';
+    const lineaPromedio = mesesValidosLabels.map(() => serieSrv.promedio);
+
+    pozoChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: mesesValidosLabels,
+        datasets: [
+          {
+            label: 'Consumo Mensual',
+            data: serieSrv.valores,
+            borderColor: colorLinea,
+            backgroundColor: colorLinea + '22',
+            fill: true,
+            borderWidth: 2.5,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: colorLinea
+          },
+          {
+            label: `Promedio (${formatPEN(serieSrv.promedio)})`,
+            data: lineaPromedio,
+            borderColor: '#94a3b8',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, font: { size: 11, weight: '600' } }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: {
+            beginAtZero: false,
+            grid: { color: '#f1f5f9' },
+            ticks: { font: { size: 10 }, callback: v => 'S/' + v }
+          }
+        }
+      }
+    });
+  }
+
+  function renderAnalitica(data) {
+    if (!data) return;
+    const { servicios, integrantes, kpis } = data;
+
+    document.getElementById('analiticaBadgeMeses').textContent = `${kpis.mesesAnalizados} meses`;
+    document.getElementById('analiticaPromMensual').textContent = formatPEN(kpis.promedioMensual);
+    document.getElementById('analiticaTotalHist').textContent = formatPEN(kpis.totalGastado);
+
+    // 1. Detectar anomalías en gastos registrados del mes abierto (+15% sobre promedio)
+    const anomalias = [];
+    if (appState && appState.gastos) {
+      appState.gastos.forEach(g => {
+        if (g.monto <= 0) return;
+        let clave = g.categoria;
+        if (g.categoria === 'Gas') {
+          const m = g.descripcion.match(/Piso\s*\d+/i);
+          clave = m ? `Gas (${m[0]})` : 'Gas Cálidda';
+        } else if (g.categoria === 'Luz') clave = 'Luz (Enel)';
+        else if (g.categoria === 'Agua') clave = 'Agua (Sedapal)';
+        else if (g.categoria === 'Internet') clave = 'Internet (Win)';
+
+        const ref = servicios.find(s => s.nombre === clave);
+        if (ref && ref.promedio > 0 && g.monto > ref.promedio * 1.15) {
+          const pctExtra = Math.round(((g.monto - ref.promedio) / ref.promedio) * 100);
+          anomalias.push(`${clave}: ${formatPEN(g.monto)} (+${pctExtra}% vs. prom. ${formatPEN(ref.promedio)})`);
+        }
+      });
+    }
+
+    const alertaEl = document.getElementById('analiticaAlertaAnomalia');
+    if (anomalias.length > 0) {
+      document.getElementById('analiticaAlertaTexto').textContent = anomalias.join(' · ');
+      alertaEl.classList.remove('hidden');
+    } else {
+      alertaEl.classList.add('hidden');
+    }
+
+    // 2. Dibujar gráfico según el chip activo
+    dibujarGraficoAnalitica();
+
+    // 3. Desglose de Promedio por Servicio (clicable para graficar incluso cada piso de Gas)
+    const totalServicios = servicios.reduce((acc, s) => acc + s.total, 0) || 1;
+    const colores = ['bg-amber-500', 'bg-indigo-500', 'bg-sky-500', 'bg-emerald-500', 'bg-teal-500', 'bg-rose-500', 'bg-slate-500'];
+
+    document.getElementById('analiticaListaServicios').innerHTML = servicios.map((s, idx) => {
+      const pct = ((s.total / totalServicios) * 100).toFixed(1);
+      const color = colores[idx % colores.length];
+      return `
+        <div onclick="seleccionarFiltroGrafico('${s.nombre}'); document.getElementById('chartEvolucionPozo').scrollIntoView({behavior:'smooth', block:'center'});" class="cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded-xl transition">
+          <div class="flex items-center justify-between text-xs mb-1">
+            <span class="font-bold text-slate-700 flex items-center gap-1">
+              ${s.nombre}
+              <i class="fa-solid fa-chart-simple text-[10px] text-slate-300"></i>
+            </span>
+            <div class="text-right">
+              <span class="font-extrabold text-slate-800">${formatPEN(s.promedio)}</span>
+              <span class="text-[10px] text-slate-400">/mes (${pct}%)</span>
+            </div>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="${color} h-full rounded-full" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 4. Aportes acumulados por integrante
+    document.getElementById('analiticaListaIntegrantes').innerHTML = integrantes.map(m => `
+      <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-xs">
+        <div>
+          <p class="font-bold text-slate-800">${m.nombre}</p>
+          <p class="text-[10px] text-slate-400">${m.aportes} meses aportados</p>
+        </div>
+        <span class="font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg">
+          ${formatPEN(m.total)}
+        </span>
+      </div>
+    `).join('');
+  }
+
+</script>

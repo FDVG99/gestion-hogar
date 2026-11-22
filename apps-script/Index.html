@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión Hogar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <?!= include('Styles'); ?>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased select-none">
+
+  <!-- Pantalla de Carga Inicial -->
+  <div id="loaderOverlay" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white">
+    <div class="w-12 h-12 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin mb-4"></div>
+    <p id="loaderText" class="text-sm font-medium tracking-wide text-slate-200">Sincronizando con Google Sheets...</p>
+  </div>
+
+  <!-- Toast de Notificación -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden transition-all duration-300">
+    <div class="bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 border border-slate-700">
+      <i class="fa-solid fa-circle-check text-emerald-400"></i>
+      <span id="toastMsg">Guardado</span>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal Estilo App Móvil -->
+  <div class="max-w-md mx-auto min-h-screen bg-slate-50 shadow-2xl flex flex-col relative pb-24">
+
+    <!-- Header Superior -->
+    <header class="bg-slate-900 text-white px-5 pt-5 pb-6 rounded-b-3xl shadow-md">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <span class="text-[11px] uppercase tracking-wider text-emerald-400 font-semibold">Finanzas del Hogar</span>
+          <h1 id="headerMesAnio" class="text-xl font-bold tracking-tight">Cargando...</h1>
+        </div>
+        <button onclick="refreshData()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300 active:scale-95 transition" title="Actualizar datos">
+          <i class="fa-solid fa-rotate text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Badge de Responsable Activo y Usuario Conectado -->
+      <div class="flex items-center justify-between bg-slate-800/80 border border-slate-700/80 rounded-2xl px-3.5 py-2.5 text-xs">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-crown text-xs"></i>
+          </div>
+          <div>
+            <p class="text-slate-400 text-[10px]">Responsable del Mes</p>
+            <p id="headerResponsable" class="font-semibold text-white">---</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-slate-400 text-[10px]">Conectado como</p>
+          <p id="headerCurrentUser" class="font-medium text-emerald-300">---</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- VISTAS DINÁMICAS -->
+    <main class="flex-1 px-4 pt-4 space-y-4">
+
+      <!-- VISTA 1: RESUMEN -->
+      <section id="view-resumen" class="tab-view space-y-4">
+        <!-- Tarjeta Principal del Pozo Acumulado -->
+        <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-3xl p-5 shadow-lg relative overflow-hidden">
+          <div class="relative z-10">
+            <p class="text-xs text-emerald-100 font-medium mb-1">Saldo Acumulado (Pozo Actual)</p>
+            <h2 id="kpiPozoActual" class="text-3xl font-extrabold tracking-tight mb-4">S/ 0.00</h2>
+            <div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/15 text-xs">
+              <div>
+                <p class="text-emerald-200 text-[10px]">Pozo Anterior</p>
+                <p id="kpiSaldoAnterior" class="font-semibold">S/ 0.00</p>
+              </div>
+              <div>
+                <p class="text-emerald-200 text-[10px]">Recaudado</p>
+                <p id="kpiRecaudado" class="font-semibold">+ S/ 0.00</p>
+              </div>
+              <div>
+                <p class="text-emerald-200 text-[10px]">Pagado</p>
+                <p id="kpiPagado" class="font-semibold">- S/ 0.00</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerta de Cobertura (Cuotas vs Recibos) -->
+        <div id="alertaCobertura" class="rounded-2xl p-4 border flex items-start gap-3 bg-white shadow-sm">
+          <div id="alertaIcon" class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <div class="flex-1">
+            <h3 id="alertaTitulo" class="text-sm font-bold text-slate-800">Análisis de Cobertura</h3>
+            <p id="alertaDetalle" class="text-xs text-slate-600 mt-0.5 leading-relaxed">Calculando proyección...</p>
+          </div>
+        </div>
+
+        <!-- Progreso Rápido -->
+        <div class="grid grid-cols-2 gap-3">
+          <div onclick="switchTab('cuotas')" class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm active:scale-[0.98] transition cursor-pointer">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Cuotas Familia</span>
+              <i class="fa-solid fa-users text-emerald-600 text-xs"></i>
+            </div>
+            <p id="resumenCuotasCount" class="text-lg font-bold text-slate-800">0 / 5</p>
+            <p id="resumenCuotasMonto" class="text-[11px] text-slate-500 mt-0.5">S/ 0 de S/ 0</p>
+          </div>
+
+          <div onclick="switchTab('gastos')" class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm active:scale-[0.98] transition cursor-pointer">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-500">Recibos y Extras</span>
+              <i class="fa-solid fa-file-invoice-dollar text-amber-500 text-xs"></i>
+            </div>
+            <p id="resumenGastosCount" class="text-lg font-bold text-slate-800">0 / 0</p>
+            <p id="resumenGastosMonto" class="text-[11px] text-slate-500 mt-0.5">S/ 0 de S/ 0</p>
+          </div>
+        </div>
+
+        <!-- Tendencia vs. Mes Anterior (Alternativa 3) -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Tendencia vs. Mes Anterior</h3>
+            <span id="tendenciaBadgeMes" class="text-[11px] font-semibold text-slate-400">---</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- Comparativa Gasto Mensual -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+              <p class="text-[10px] font-semibold text-slate-500">Gasto Total del Mes</p>
+              <p id="tendenciaGastoActual" class="text-sm font-extrabold text-slate-800 mt-0.5">S/ 0.00</p>
+              <p id="tendenciaGastoDiff" class="text-[11px] font-semibold text-slate-400 mt-1 flex items-center gap-1">
+                Sin mes previo
+              </p>
+            </div>
+
+            <!-- Variación Neta del Pozo -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+              <p class="text-[10px] font-semibold text-slate-500">Variación del Pozo</p>
+              <p id="tendenciaPozoVar" class="text-sm font-extrabold text-slate-800 mt-0.5">S/ 0.00</p>
+              <p id="tendenciaPozoPorc" class="text-[11px] font-semibold text-slate-400 mt-1">
+                Respecto al inicio
+              </p>
+            </div>
+          </div>
+
+          <!-- Acción directa cuando el mes llega al 100% -->
+          <div id="ctaListoCierre" onclick="switchTab('cierre')" class="hidden pt-2 border-t border-slate-100 flex items-center justify-between text-xs cursor-pointer group">
+            <span class="font-semibold text-emerald-700 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-emerald-500"></i>
+              Mes al 100 % · Listo para cerrar y transferir
+            </span>
+            <i class="fa-solid fa-arrow-right text-emerald-600 group-hover:translate-x-0.5 transition"></i>
+          </div>
+        </div>
+      </section>
+      <!-- VISTA 2: CUOTAS -->
+      <section id="view-cuotas" class="tab-view hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Aportes de la Familia</h2>
+            <p class="text-xs text-slate-500">Toca el monto para ajustar o marca pagado</p>
+          </div>
+          <span id="badgeTotalCuotas" class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">S/ 0.00</span>
+        </div>
+        <div id="listaCuotas" class="space-y-2.5"></div>
+      </section>
+
+      <!-- VISTA 3: GASTOS -->
+      <section id="view-gastos" class="tab-view hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Servicios y Gastos</h2>
+            <p class="text-xs text-slate-500">Recibos fijos, 4 pisos de gas y extras</p>
+          </div>
+          <button onclick="openModalExtra()" class="bg-slate-900 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow active:scale-95 transition">
+            <i class="fa-solid fa-plus"></i> Extra
+          </button>
+        </div>
+
+        <!-- Servicios Generales -->
+        <div>
+          <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Servicios Generales</h3>
+          <div id="listaServiciosGenerales" class="space-y-2"></div>
+        </div>
+
+        <!-- Gas Natural por Piso -->
+        <div>
+          <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Gas Natural Cálidda (Por Piso)</h3>
+          <div id="listaGasPisos" class="space-y-2"></div>
+        </div>
+
+        <!-- Gastos Extraordinarios -->
+        <div>
+          <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Gastos Extraordinarios</h3>
+          <div id="listaGastosExtras" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- VISTA 4: CIERRE Y TRASPASO -->
+      <section id="view-cierre" class="tab-view hidden space-y-4">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+          <h2 class="text-base font-bold text-slate-800">Cierre de Mes y Traspaso</h2>
+          <p class="text-xs text-slate-600 leading-relaxed">
+            Al cerrar el mes actual, el saldo acumulado final se transferirá automáticamente como <strong>Pozo Inicial</strong> al nuevo responsable elegido.
+          </p>
+
+          <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-500">Pozo heredado anterior:</span>
+              <span id="cierreSaldoAnt" class="font-semibold">S/ 0.00</span>
+            </div>
+            <div class="flex justify-between text-emerald-700">
+              <span>+ Cuotas recaudadas:</span>
+              <span id="cierreIngresos" class="font-semibold">S/ 0.00</span>
+            </div>
+            <div class="flex justify-between text-rose-600">
+              <span>- Gastos pagados:</span>
+              <span id="cierreGastos" class="font-semibold">S/ 0.00</span>
+            </div>
+            <div class="flex justify-between pt-2 border-t border-slate-200 text-sm font-bold text-slate-900">
+              <span>Pozo a transferir:</span>
+              <span id="cierreTotalTransferir" class="text-emerald-600">S/ 0.00</span>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-1">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre del Siguiente Periodo</label>
+              <input type="text" id="inputNuevoMes" placeholder="Ej. Diciembre 2026" class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Nuevo Responsable (Tesorero)</label>
+              <select id="selectNuevoResponsable" class="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-300 rounded-xl focus:outline-none focus:border-emerald-500"></select>
+            </div>
+            <button onclick="ejecutarCierreMes()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm py-3 rounded-xl shadow-md active:scale-[0.99] transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i> Cerrar Mes y Transferir Pozo
+            </button>
+          </div>
+        </div>
+
+        <!-- Historial de Meses Cerrados -->
+        <div class="space-y-2">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Historial de Cierres</h3>
+          <div id="listaHistorial" class="space-y-2"></div>
+        </div>
+      </section>
+      <!-- VISTA 5: ANALÍTICA HISTÓRICA -->
+      <section id="view-analitica" class="tab-view hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Analítica del Hogar</h2>
+            <p class="text-xs text-slate-500">Evolución del pozo y promedios reales</p>
+          </div>
+          <span id="analiticaBadgeMeses" class="bg-slate-900 text-emerald-400 text-[11px] font-bold px-3 py-1 rounded-full">
+            0 meses
+          </span>
+        </div>
+
+        <!-- KPIs Promedio -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+            <p class="text-[11px] font-semibold text-slate-500">Gasto Mensual Promedio</p>
+            <p id="analiticaPromMensual" class="text-lg font-extrabold text-slate-800 mt-0.5">S/ 0.00</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Servicios + extras</p>
+          </div>
+          <div class="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+            <p class="text-[11px] font-semibold text-slate-500">Total Ejecutado</p>
+            <p id="analiticaTotalHist" class="text-lg font-extrabold text-emerald-600 mt-0.5">S/ 0.00</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Acumulado auditado</p>
+          </div>
+        </div>
+
+        <!-- Alerta de Consumo Anómalo (si algún recibo actual supera +15% su promedio) -->
+        <div id="analiticaAlertaAnomalia" class="hidden rounded-2xl p-3.5 border border-amber-300 bg-amber-50 flex items-start gap-3">
+          <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+            <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-amber-900">Alerta de Consumo Elevado</h3>
+            <p id="analiticaAlertaTexto" class="text-[11px] text-amber-800 mt-0.5 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <!-- Gráfico Interactivo: Evolución Global o por Servicio Básico -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 id="tituloGraficoAnalitica" class="text-xs font-bold uppercase tracking-wider text-slate-500">Evolución Pozo vs. Gastos</h3>
+            <span class="text-[10px] text-slate-400">Soles (S/)</span>
+          </div>
+
+          <!-- Chips de Filtro Rápido -->
+          <div id="chipsFiltroServicio" class="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <button onclick="seleccionarFiltroGrafico('GLOBAL')" data-filtro="GLOBAL" class="chip-analitica active shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold bg-slate-900 text-white transition">
+              Pozo vs. Gastos
+            </button>
+            <button onclick="seleccionarFiltroGrafico('Luz (Enel)')" data-filtro="Luz (Enel)" class="chip-analitica shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              ⚡ Luz
+            </button>
+            <button onclick="seleccionarFiltroGrafico('Agua (Sedapal)')" data-filtro="Agua (Sedapal)" class="chip-analitica shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              💧 Agua
+            </button>
+            <button onclick="seleccionarFiltroGrafico('Internet (Win)')" data-filtro="Internet (Win)" class="chip-analitica shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              🌐 Internet
+            </button>
+            <button onclick="seleccionarFiltroGrafico('Gas (Total 4 Pisos)')" data-filtro="Gas (Total 4 Pisos)" class="chip-analitica shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              🔥 Gas Total
+            </button>
+          </div>
+
+          <!-- Mini Resumen Estadístico cuando se selecciona un servicio -->
+          <div id="statsServicioSeleccionado" class="hidden grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200/70 text-center">
+            <div>
+              <p class="text-[10px] text-slate-400 font-medium">Mínimo</p>
+              <p id="statSrvMin" class="text-xs font-extrabold text-emerald-600">S/ 0.00</p>
+            </div>
+            <div class="border-x border-slate-200">
+              <p class="text-[10px] text-slate-400 font-medium">Promedio</p>
+              <p id="statSrvProm" class="text-xs font-extrabold text-slate-800">S/ 0.00</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-medium">Pico Máximo</p>
+              <p id="statSrvMax" class="text-xs font-extrabold text-amber-600">S/ 0.00</p>
+            </div>
+          </div>
+
+          <div class="relative h-52 w-full">
+            <canvas id="chartEvolucionPozo"></canvas>
+          </div>
+        </div>
+
+        <!-- Desglose y Promedio por Servicio -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Promedio Mensual por Servicio</h3>
+            <span class="text-[10px] text-slate-400">% del gasto</span>
+          </div>
+          <div id="analiticaListaServicios" class="space-y-3"></div>
+        </div>
+
+        <!-- Aportes Acumulados por Familiar -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Aportes Acumulados por Familiar</h3>
+          <div id="analiticaListaIntegrantes" class="space-y-2"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Navegación Inferior Fija -->
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-slate-200 px-1.5 py-2 flex justify-around items-center z-40">
+      <button onclick="switchTab('resumen')" data-tab="resumen" class="nav-btn active flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-emerald-600">
+        <i class="fa-solid fa-house text-base"></i>
+        <span class="text-[10px] font-bold">Resumen</span>
+      </button>
+      <button onclick="switchTab('cuotas')" data-tab="cuotas" class="nav-btn flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-slate-400">
+        <i class="fa-solid fa-hand-holding-dollar text-base"></i>
+        <span class="text-[10px] font-semibold">Cuotas</span>
+      </button>
+      <button onclick="switchTab('gastos')" data-tab="gastos" class="nav-btn flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-slate-400">
+        <i class="fa-solid fa-receipt text-base"></i>
+        <span class="text-[10px] font-semibold">Gastos</span>
+      </button>
+      <button onclick="switchTab('analitica')" data-tab="analitica" class="nav-btn flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-slate-400">
+        <i class="fa-solid fa-chart-line text-base"></i>
+        <span class="text-[10px] font-semibold">Analítica</span>
+      </button>
+      <button onclick="switchTab('cierre')" data-tab="cierre" class="nav-btn flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl text-slate-400">
+        <i class="fa-solid fa-vault text-base"></i>
+        <span class="text-[10px] font-semibold">Cierre</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Modal Edición Rápida de Monto -->
+  <div id="modalEditMonto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 id="modalEditTitle" class="text-base font-bold text-slate-800">Editar Monto</h3>
+        <button onclick="closeModal('modalEditMonto')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Importe en Soles (S/)</label>
+        <input type="number" step="0.01" id="inputEditMonto" class="w-full text-2xl font-bold px-4 py-3 bg-slate-50 border border-slate-300 rounded-2xl focus:outline-none focus:border-emerald-500">
+      </div>
+      <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer select-none">
+        <input type="checkbox" id="checkEditPagado" class="w-4 h-4 accent-emerald-600 rounded">
+        <span id="labelEditPagado">Ya se realizó el pago</span>
+      </label>
+      <div class="flex gap-2">
+        <button onclick="closeModal('modalEditMonto')" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold">Cancelar</button>
+        <button onclick="confirmarEditMonto()" class="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nuevo Gasto Extra -->
+  <div id="modalNuevoExtra" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-bold text-slate-800">Registrar Gasto Extra</h3>
+        <button onclick="closeModal('modalNuevoExtra')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Concepto / Descripción</label>
+          <input type="text" id="inputExtraDesc" placeholder="Ej. Reparación bomba de agua" class="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded-xl">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Monto (S/)</label>
+          <input type="number" step="0.01" id="inputExtraMonto" placeholder="0.00" class="w-full px-3.5 py-2.5 text-sm font-bold border border-slate-300 rounded-xl">
+        </div>
+        <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+          <input type="checkbox" id="checkExtraPagado" checked class="w-4 h-4 accent-emerald-600 rounded">
+          Ya fue pagado
+        </label>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeModal('modalNuevoExtra')" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold">Cancelar</button>
+        <button onclick="confirmarNuevoExtra()" class="flex-1 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold shadow">Agregar Gasto</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal Detalle de Periodo Histórico (Solo Lectura) -->
+  <div id="modalDetalleHistorico" class="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-50 w-full max-w-md max-h-[88vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      <!-- Cabecera del Modal -->
+      <div class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between shrink-0">
+        <div>
+          <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Periodo Cerrado</span>
+          <h3 id="histModalTitulo" class="text-lg font-bold">---</h3>
+          <p id="histModalSubtitulo" class="text-[11px] text-slate-400">---</p>
+        </div>
+        <button onclick="closeModal('modalDetalleHistorico')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Cuerpo con Scroll -->
+      <div class="p-4 overflow-y-auto space-y-4 text-xs">
+        <!-- Balance del Mes -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-1.5">
+          <div class="flex justify-between text-slate-500">
+            <span>Pozo inicial heredado:</span>
+            <span id="histSaldoAnt" class="font-semibold text-slate-800">S/ 0.00</span>
+          </div>
+          <div class="flex justify-between text-emerald-700">
+            <span>+ Total cuotas recaudadas:</span>
+            <span id="histIngresos" class="font-semibold">S/ 0.00</span>
+          </div>
+          <div class="flex justify-between text-rose-600">
+            <span>- Total gastos pagados:</span>
+            <span id="histGastos" class="font-semibold">S/ 0.00</span>
+          </div>
+          <div class="flex justify-between pt-2 border-t border-slate-100 text-sm font-bold text-slate-900">
+            <span>Saldo Final Transferido:</span>
+            <span id="histSaldoCierre" class="text-emerald-600">S/ 0.00</span>
+          </div>
+        </div>
+
+        <!-- Cuotas del Mes -->
+        <div>
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Aportes de la Familia</h4>
+          <div id="histListaCuotas" class="space-y-1.5"></div>
+        </div>
+
+        <!-- Gastos del Mes -->
+        <div>
+          <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">Recibos y Gastos Pagados</h4>
+          <div id="histListaGastos" class="space-y-1.5"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const INITIAL_ID_TOKEN = "<?= initialToken ?>";
+    let LOGGED_USER_EMAIL = "";
+  </script>
+  <?!= include('Scripts'); ?>
+</body>
+</html>

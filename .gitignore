@@ -1,0 +1,25 @@
+
+# Credenciales y secretos
+.clasprc.json
+**/.clasprc.json
+.env
+.env.*
+!.env.example
+credentials.json
+token.json
+
+# Dependencias
+node_modules/
+
+# Archivos temporales
+*.log
+*.tmp
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
