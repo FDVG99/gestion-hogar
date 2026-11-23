@@ -1,11 +1,12 @@
-const GOOGLE_CLIENT_ID = "252920345538-gq6c1c99ntsk88d9sj19jvjkre2mt1nd.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = '252920345538-gq6c1c99ntsk88d9sj19jvjkre2mt1nd.apps.googleusercontent.com';
 
 function doGet(e) {
-  const token = (e && e.parameter && e.parameter.token) ? String(e.parameter.token).trim() : '';
+  const token = e && e.parameter && e.parameter.token ? String(e.parameter.token).trim() : '';
 
   // Si abren directo el link del script sin token, redirigir limpiamente al login de GitHub Pages
   if (!token) {
-    return HtmlService.createHtmlOutput(`
+    return HtmlService.createHtmlOutput(
+      `
       <!DOCTYPE html>
       <html lang="es">
       <head>
@@ -26,18 +27,23 @@ function doGet(e) {
         </script>
       </body>
       </html>
-    `)
-    .setTitle('Gestión Hogar')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    `
+    )
+      .setTitle('Gestión Hogar')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
   const template = HtmlService.createTemplateFromFile('Index');
   template.initialToken = token;
 
-  return template.evaluate()
+  return template
+    .evaluate()
     .setTitle('Gestión Hogar - Finanzas Familiares')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    .addMetaTag(
+      'viewport',
+      'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
+    )
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 /**
@@ -58,42 +64,49 @@ function verifyGoogleIdToken_(idToken) {
   if (!idToken) {
     throw new Error('TOKEN_VACIO: No llegó ningún token en la URL.');
   }
-  try {
-    // 1. Intento oficial contra endpoint de Google
-    const url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken);
-    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    if (response.getResponseCode() === 200) {
-      const payload = JSON.parse(response.getContentText());
-      if (payload.aud === GOOGLE_CLIENT_ID && String(payload.email_verified) === 'true') {
-        return String(payload.email || '').toLowerCase().trim();
-      }
-    }
 
-    // 2. Respaldo decodificando el JWT con relleno Base64 correcto
-    const parts = idToken.split('.');
-    if (parts.length === 3) {
-      let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      while (base64.length % 4 !== 0) {
-        base64 += '=';
-      }
-      const decoded = Utilities.newBlob(Utilities.base64Decode(base64)).getDataAsString();
-      const payload = JSON.parse(decoded);
-      const now = Math.floor(Date.now() / 1000);
+  // 1. Intento oficial contra endpoint de Google
+  const url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken);
+  const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
 
-      if (payload.aud !== GOOGLE_CLIENT_ID) {
-        throw new Error('AUD_MISMATCH: Client ID distinto.');
-      }
-      if (payload.exp <= now) {
-        throw new Error('TOKEN_EXPIRADO: El token ya venció, inicia sesión de nuevo.');
-      }
-      if (payload.email) {
-        return String(payload.email).toLowerCase().trim();
-      }
+  if (response.getResponseCode() === 200) {
+    const payload = JSON.parse(response.getContentText());
+
+    if (payload.aud === GOOGLE_CLIENT_ID && String(payload.email_verified) === 'true') {
+      return String(payload.email || '')
+        .toLowerCase()
+        .trim();
     }
-    throw new Error('FORMATO_INVALIDO: El token recibido tiene ' + idToken.length + ' caracteres.');
-  } catch (err) {
-    throw new Error(err.message);
   }
+
+  // 2. Respaldo decodificando el JWT con relleno Base64 correcto
+  const parts = idToken.split('.');
+
+  if (parts.length === 3) {
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+
+    while (base64.length % 4 !== 0) {
+      base64 += '=';
+    }
+
+    const decoded = Utilities.newBlob(Utilities.base64Decode(base64)).getDataAsString();
+    const payload = JSON.parse(decoded);
+    const now = Math.floor(Date.now() / 1000);
+
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
+      throw new Error('AUD_MISMATCH: Client ID distinto.');
+    }
+
+    if (payload.exp <= now) {
+      throw new Error('TOKEN_EXPIRADO: El token ya venció, inicia sesión de nuevo.');
+    }
+
+    if (payload.email) {
+      return String(payload.email).toLowerCase().trim();
+    }
+  }
+
+  throw new Error('FORMATO_INVALIDO: El token recibido tiene ' + idToken.length + ' caracteres.');
 }
 
 function include(filename) {
@@ -108,7 +121,9 @@ function checkUserAuthorization_(email) {
 
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    const rowEmail = String(data[i][3] || '').toLowerCase().trim();
+    const rowEmail = String(data[i][3] || '')
+      .toLowerCase()
+      .trim();
     const isActive = data[i][5] === true || String(data[i][5]).toUpperCase() === 'TRUE';
     if (rowEmail === email && isActive) {
       return true;

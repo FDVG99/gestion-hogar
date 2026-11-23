@@ -10,14 +10,7 @@ function setupDatabase() {
   try {
     // 1. Definición de esquema de pestañas y encabezados
     const schema = {
-      Config_Familia: [
-        'ID_Integrante',
-        'Nombre',
-        'Rol',
-        'Email',
-        'Cuota_Base',
-        'Activo'
-      ],
+      Config_Familia: ['ID_Integrante', 'Nombre', 'Rol', 'Email', 'Cuota_Base', 'Activo'],
       Periodos: [
         'ID_Periodo',
         'Mes_Anio',
@@ -27,7 +20,7 @@ function setupDatabase() {
         'Total_Gastos',
         'Saldo_Cierre',
         'Estado',
-        'Fecha_Cierre'
+        'Fecha_Cierre',
       ],
       Cuotas: [
         'ID_Cuota',
@@ -36,7 +29,7 @@ function setupDatabase() {
         'Nombre_Integrante',
         'Monto_Asignado',
         'Pagado',
-        'Fecha_Pago'
+        'Fecha_Pago',
       ],
       Gastos: [
         'ID_Gasto',
@@ -46,12 +39,12 @@ function setupDatabase() {
         'Descripcion',
         'Monto',
         'Pagado',
-        'Fecha_Pago'
-      ]
+        'Fecha_Pago',
+      ],
     };
 
     // Crear o limpiar pestañas según el esquema
-    Object.keys(schema).forEach(sheetName => {
+    Object.keys(schema).forEach((sheetName) => {
       let sheet = ss.getSheetByName(sheetName);
       if (!sheet) {
         sheet = ss.insertSheet(sheetName);
@@ -77,11 +70,11 @@ function setupDatabase() {
 
     // 2. Poblar Config_Familia (Reemplaza los correos placeholder por los 5 Gmail reales)
     const familiaData = [
-      ['INT-01', 'José',    'Papá',    'jose.familia@gmail.com',    160, true],
-      ['INT-02', 'Judith',  'Mamá',    'judith.familia@gmail.com',   65, true],
-      ['INT-03', 'Everin',  'Hermana', 'everin.familia@gmail.com',  115, true],
+      ['INT-01', 'José', 'Papá', 'jose.familia@gmail.com', 160, true],
+      ['INT-02', 'Judith', 'Mamá', 'judith.familia@gmail.com', 65, true],
+      ['INT-03', 'Everin', 'Hermana', 'everin.familia@gmail.com', 115, true],
       ['INT-04', 'Natalie', 'Hermana', 'natalie.familia@gmail.com', 115, true],
-      ['INT-05', 'Fermat',  'Hijo',    'fermat.familia@gmail.com',  115, true]
+      ['INT-05', 'Fermat', 'Hijo', 'fermat.familia@gmail.com', 115, true],
     ];
     ss.getSheetByName('Config_Familia')
       .getRange(2, 1, familiaData.length, familiaData[0].length)
@@ -89,20 +82,20 @@ function setupDatabase() {
 
     // 3. Inicializar Periodo Actual (Noviembre 2026)
     const periodoId = 'PER-2026-11';
-    const periodoData = [[
-      periodoId,
-      'Noviembre 2026',
-      'INT-05', // Fermat como responsable inicial
-      0,        // Saldo_Anterior (Pozo heredado)
-      0,        // Total_Ingresos (se calcula dinámicamente)
-      0,        // Total_Gastos (se calcula dinámicamente)
-      0,        // Saldo_Cierre
-      'ABIERTO',
-      ''
-    ]];
-    ss.getSheetByName('Periodos')
-      .getRange(2, 1, 1, periodoData[0].length)
-      .setValues(periodoData);
+    const periodoData = [
+      [
+        periodoId,
+        'Noviembre 2026',
+        'INT-05', // Fermat como responsable inicial
+        0, // Saldo_Anterior (Pozo heredado)
+        0, // Total_Ingresos (se calcula dinámicamente)
+        0, // Total_Gastos (se calcula dinámicamente)
+        0, // Saldo_Cierre
+        'ABIERTO',
+        '',
+      ],
+    ];
+    ss.getSheetByName('Periodos').getRange(2, 1, 1, periodoData[0].length).setValues(periodoData);
 
     // 4. Generar Cuotas Base para el periodo inicial
     const cuotasData = familiaData.map((member, idx) => [
@@ -111,8 +104,8 @@ function setupDatabase() {
       member[0], // ID_Integrante
       member[1], // Nombre
       member[4], // Cuota_Base
-      false,     // Pagado
-      ''         // Fecha_Pago
+      false, // Pagado
+      '', // Fecha_Pago
     ]);
     ss.getSheetByName('Cuotas')
       .getRange(2, 1, cuotasData.length, cuotasData[0].length)
@@ -120,13 +113,13 @@ function setupDatabase() {
 
     // 5. Precargar plantilla de servicios fijos del mes (incluyendo los 4 pisos de Cálidda)
     const gastosFijosData = [
-      ['GAS-202611-01', periodoId, 'Agua',     'Sedapal',  'Recibo mensual Sedapal',      0, false, ''],
-      ['GAS-202611-02', periodoId, 'Luz',      'Enel',     'Recibo mensual Enel',         0, false, ''],
-      ['GAS-202611-03', periodoId, 'Internet', 'Win',      'Fibra óptica Win',            0, false, ''],
-      ['GAS-202611-04', periodoId, 'Gas',      'Cálidda',  'Cálidda - Piso 1',            0, false, ''],
-      ['GAS-202611-05', periodoId, 'Gas',      'Cálidda',  'Cálidda - Piso 2',            0, false, ''],
-      ['GAS-202611-06', periodoId, 'Gas',      'Cálidda',  'Cálidda - Piso 3',            0, false, ''],
-      ['GAS-202611-07', periodoId, 'Gas',      'Cálidda',  'Cálidda - Piso 4',            0, false, '']
+      ['GAS-202611-01', periodoId, 'Agua', 'Sedapal', 'Recibo mensual Sedapal', 0, false, ''],
+      ['GAS-202611-02', periodoId, 'Luz', 'Enel', 'Recibo mensual Enel', 0, false, ''],
+      ['GAS-202611-03', periodoId, 'Internet', 'Win', 'Fibra óptica Win', 0, false, ''],
+      ['GAS-202611-04', periodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 1', 0, false, ''],
+      ['GAS-202611-05', periodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 2', 0, false, ''],
+      ['GAS-202611-06', periodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 3', 0, false, ''],
+      ['GAS-202611-07', periodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 4', 0, false, ''],
     ];
     ss.getSheetByName('Gastos')
       .getRange(2, 1, gastosFijosData.length, gastosFijosData[0].length)
@@ -138,17 +131,16 @@ function setupDatabase() {
     ss.getSheetByName('Cuotas').getRange('E2:E6').setNumberFormat('"S/ "#,##0.00');
     ss.getSheetByName('Gastos').getRange('F2:F8').setNumberFormat('"S/ "#,##0.00');
 
-    Object.keys(schema).forEach(sheetName => {
+    Object.keys(schema).forEach((sheetName) => {
       const sheet = ss.getSheetByName(sheetName);
       sheet.autoResizeColumns(1, schema[sheetName].length);
     });
 
     Logger.log('Base de datos inicializada correctamente.');
     return { success: true, message: 'Base de datos creada e inicializada correctamente.' };
-
   } catch (error) {
     Logger.log('Error en setupDatabase: ' + error.message);
-    throw new Error('No se pudo inicializar la base de datos: ' + error.message);
+    throw error;
   } finally {
     lock.releaseLock();
   }
@@ -162,7 +154,9 @@ function setupDatabase() {
  */
 function getAppData(loggedEmail) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const userEmail = String(loggedEmail || Session.getActiveUser().getEmail() || '').toLowerCase().trim();
+  const userEmail = String(loggedEmail || Session.getActiveUser().getEmail() || '')
+    .toLowerCase()
+    .trim();
 
   const familiaRows = ss.getSheetByName('Config_Familia').getDataRange().getValues();
   const periodosRows = ss.getSheetByName('Periodos').getDataRange().getValues();
@@ -180,7 +174,7 @@ function getAppData(loggedEmail) {
         nombre: String(r[1]),
         rol: String(r[2]),
         email: String(r[3]).toLowerCase().trim(),
-        cuotaBase: Number(r[4]) || 0
+        cuotaBase: Number(r[4]) || 0,
       };
       familia.push(member);
       if (member.email === userEmail) currentUser = member;
@@ -202,7 +196,9 @@ function getAppData(loggedEmail) {
       totalGastos: Number(r[5]) || 0,
       saldoCierre: Number(r[6]) || 0,
       estado: String(r[7]),
-      fechaCierre: r[8] ? Utilities.formatDate(new Date(r[8]), Session.getScriptTimeZone(), 'dd/MM/yyyy') : ''
+      fechaCierre: r[8]
+        ? Utilities.formatDate(new Date(r[8]), Session.getScriptTimeZone(), 'dd/MM/yyyy')
+        : '',
     };
     periodos.push(p);
     if (p.estado === 'ABIERTO') activePeriodo = p;
@@ -226,7 +222,7 @@ function getAppData(loggedEmail) {
         nombre: String(r[3]),
         monto: Number(r[4]) || 0,
         pagado: r[5] === true || String(r[5]).toUpperCase() === 'TRUE',
-        fechaPago: formatFechaCorta_(r[6])
+        fechaPago: formatFechaCorta_(r[6]),
       });
     }
   }
@@ -245,20 +241,22 @@ function getAppData(loggedEmail) {
         descripcion: String(r[4]),
         monto: Number(r[5]) || 0,
         pagado: r[6] === true || String(r[6]).toUpperCase() === 'TRUE',
-        fechaPago: formatFechaCorta_(r[7])
+        fechaPago: formatFechaCorta_(r[7]),
       });
     }
   }
 
   // Serialización segura sin objetos Date
-  return JSON.parse(JSON.stringify({
-    currentUser,
-    familia,
-    activePeriodo,
-    historialPeriodos: periodos.filter(p => p.estado === 'CERRADO').reverse(),
-    cuotas,
-    gastos
-  }));
+  return JSON.parse(
+    JSON.stringify({
+      currentUser,
+      familia,
+      activePeriodo,
+      historialPeriodos: periodos.filter((p) => p.estado === 'CERRADO').reverse(),
+      cuotas,
+      gastos,
+    })
+  );
 }
 
 /**
@@ -275,15 +273,17 @@ function updateCuota(cuotaId, nuevoMonto, pagado) {
 
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(cuotaId)) {
-        const fechaLimpia = pagado
-          ? (data[i][6] ? formatFechaCorta_(data[i][6]) : hoy)
-          : '';
-        sheet.getRange(i + 1, 5, 1, 3).setValues([[
-          Number(nuevoMonto),
-          Boolean(pagado),
-          fechaLimpia ? "'" + fechaLimpia : ''
-        ]]);
-        return { success: true, id: cuotaId, monto: Number(nuevoMonto), pagado: Boolean(pagado), fechaPago: fechaLimpia };
+        const fechaLimpia = pagado ? (data[i][6] ? formatFechaCorta_(data[i][6]) : hoy) : '';
+        sheet
+          .getRange(i + 1, 5, 1, 3)
+          .setValues([[Number(nuevoMonto), Boolean(pagado), fechaLimpia ? "'" + fechaLimpia : '']]);
+        return {
+          success: true,
+          id: cuotaId,
+          monto: Number(nuevoMonto),
+          pagado: Boolean(pagado),
+          fechaPago: fechaLimpia,
+        };
       }
     }
     throw new Error('Cuota no encontrada');
@@ -306,19 +306,24 @@ function updateGasto(gastoId, nuevoMonto, pagado, nuevaDescripcion) {
 
     for (let i = 1; i < data.length; i++) {
       if (String(data[i][0]) === String(gastoId)) {
-        const desc = (nuevaDescripcion !== undefined && nuevaDescripcion !== null)
-          ? String(nuevaDescripcion)
-          : String(data[i][4]);
-        const fechaLimpia = pagado
-          ? (data[i][7] ? formatFechaCorta_(data[i][7]) : hoy)
-          : '';
-        sheet.getRange(i + 1, 5, 1, 4).setValues([[
-          desc,
-          Number(nuevoMonto),
-          Boolean(pagado),
-          fechaLimpia ? "'" + fechaLimpia : ''
-        ]]);
-        return { success: true, id: gastoId, descripcion: desc, monto: Number(nuevoMonto), pagado: Boolean(pagado), fechaPago: fechaLimpia };
+        const desc =
+          nuevaDescripcion !== undefined && nuevaDescripcion !== null
+            ? String(nuevaDescripcion)
+            : String(data[i][4]);
+        const fechaLimpia = pagado ? (data[i][7] ? formatFechaCorta_(data[i][7]) : hoy) : '';
+        sheet
+          .getRange(i + 1, 5, 1, 4)
+          .setValues([
+            [desc, Number(nuevoMonto), Boolean(pagado), fechaLimpia ? "'" + fechaLimpia : ''],
+          ]);
+        return {
+          success: true,
+          id: gastoId,
+          descripcion: desc,
+          monto: Number(nuevoMonto),
+          pagado: Boolean(pagado),
+          fechaPago: fechaLimpia,
+        };
       }
     }
     throw new Error('Gasto no encontrado');
@@ -342,16 +347,18 @@ function addGastoExtra(periodoId, descripcion, monto, pagado) {
 
     const nextRow = sheet.getLastRow() + 1;
     const range = sheet.getRange(nextRow, 1, 1, 8);
-    range.setValues([[
-      newId,
-      periodoId,
-      'Extra',
-      'Eventual',
-      String(descripcion),
-      Number(monto),
-      Boolean(pagado),
-      fechaLimpia ? "'" + fechaLimpia : ''
-    ]]);
+    range.setValues([
+      [
+        newId,
+        periodoId,
+        'Extra',
+        'Eventual',
+        String(descripcion),
+        Number(monto),
+        Boolean(pagado),
+        fechaLimpia ? "'" + fechaLimpia : '',
+      ],
+    ]);
     sheet.getRange(nextRow, 6).setNumberFormat('"S/ "#,##0.00');
 
     return {
@@ -364,8 +371,8 @@ function addGastoExtra(periodoId, descripcion, monto, pagado) {
         descripcion: String(descripcion),
         monto: Number(monto),
         pagado: Boolean(pagado),
-        fechaPago: fechaLimpia
-      }
+        fechaPago: fechaLimpia,
+      },
     };
   } finally {
     lock.releaseLock();
@@ -422,7 +429,7 @@ function cambiarResponsableActivo(periodoId, nuevoResponsableId) {
  * Cierra el periodo actual, congela el saldo de cierre y abre el siguiente mes
  * transfiriendo el saldo acumulado al nuevo responsable.
  */
-function cerrarMesYTransferir(periodoActualId, siguienteMesAnio, nuevoResponsableId,loggedEmail) {
+function cerrarMesYTransferir(periodoActualId, siguienteMesAnio, nuevoResponsableId, loggedEmail) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
@@ -449,16 +456,16 @@ function cerrarMesYTransferir(periodoActualId, siguienteMesAnio, nuevoResponsabl
     // Crear nuevo periodo
     const nuevoPeriodoId = 'PER-' + new Date().getTime();
     periodosSheet.appendRow([
-        nuevoPeriodoId,
-        "'" + String(siguienteMesAnio).trim(),
-        String(nuevoResponsableId),
-        saldoArrastre,
-        0,
-        0,
-        saldoArrastre,
-        'ABIERTO',
-        ''
-      ]);
+      nuevoPeriodoId,
+      "'" + String(siguienteMesAnio).trim(),
+      String(nuevoResponsableId),
+      saldoArrastre,
+      0,
+      0,
+      saldoArrastre,
+      'ABIERTO',
+      '',
+    ]);
     const newPRow = periodosSheet.getLastRow();
     periodosSheet.getRange(newPRow, 4, 1, 4).setNumberFormat('"S/ "#,##0.00');
 
@@ -474,7 +481,7 @@ function cerrarMesYTransferir(periodoActualId, siguienteMesAnio, nuevoResponsabl
           String(fData[i][1]),
           Number(fData[i][4]) || 0,
           false,
-          ''
+          '',
         ]);
       }
     }
@@ -487,13 +494,22 @@ function cerrarMesYTransferir(periodoActualId, siguienteMesAnio, nuevoResponsabl
     // Precargar servicios fijos en S/ 0.00
     const ts = new Date().getTime();
     const nuevosGastos = [
-      ['GAS-' + ts + '-1', nuevoPeriodoId, 'Agua',     'Sedapal', 'Recibo mensual Sedapal', 0, false, ''],
-      ['GAS-' + ts + '-2', nuevoPeriodoId, 'Luz',      'Enel',    'Recibo mensual Enel',    0, false, ''],
-      ['GAS-' + ts + '-3', nuevoPeriodoId, 'Internet', 'Win',     'Fibra óptica Win',       0, false, ''],
-      ['GAS-' + ts + '-4', nuevoPeriodoId, 'Gas',      'Cálidda', 'Cálidda - Piso 1',       0, false, ''],
-      ['GAS-' + ts + '-5', nuevoPeriodoId, 'Gas',      'Cálidda', 'Cálidda - Piso 2',       0, false, ''],
-      ['GAS-' + ts + '-6', nuevoPeriodoId, 'Gas',      'Cálidda', 'Cálidda - Piso 3',       0, false, ''],
-      ['GAS-' + ts + '-7', nuevoPeriodoId, 'Gas',      'Cálidda', 'Cálidda - Piso 4',       0, false, '']
+      [
+        'GAS-' + ts + '-1',
+        nuevoPeriodoId,
+        'Agua',
+        'Sedapal',
+        'Recibo mensual Sedapal',
+        0,
+        false,
+        '',
+      ],
+      ['GAS-' + ts + '-2', nuevoPeriodoId, 'Luz', 'Enel', 'Recibo mensual Enel', 0, false, ''],
+      ['GAS-' + ts + '-3', nuevoPeriodoId, 'Internet', 'Win', 'Fibra óptica Win', 0, false, ''],
+      ['GAS-' + ts + '-4', nuevoPeriodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 1', 0, false, ''],
+      ['GAS-' + ts + '-5', nuevoPeriodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 2', 0, false, ''],
+      ['GAS-' + ts + '-6', nuevoPeriodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 3', 0, false, ''],
+      ['GAS-' + ts + '-7', nuevoPeriodoId, 'Gas', 'Cálidda', 'Cálidda - Piso 4', 0, false, ''],
     ];
     const startGRow = gastosSheet.getLastRow() + 1;
     gastosSheet.getRange(startGRow, 1, nuevosGastos.length, 8).setValues(nuevosGastos);
@@ -517,14 +533,20 @@ function recalcularTotalesPeriodo_(periodoId) {
 
   let totalIngresosRecaudados = 0;
   for (let i = 1; i < cuotasData.length; i++) {
-    if (String(cuotasData[i][1]) === periodoId && (cuotasData[i][5] === true || String(cuotasData[i][5]).toUpperCase() === 'TRUE')) {
+    if (
+      String(cuotasData[i][1]) === periodoId &&
+      (cuotasData[i][5] === true || String(cuotasData[i][5]).toUpperCase() === 'TRUE')
+    ) {
       totalIngresosRecaudados += Number(cuotasData[i][4]) || 0;
     }
   }
 
   let totalGastosPagados = 0;
   for (let i = 1; i < gastosData.length; i++) {
-    if (String(gastosData[i][1]) === periodoId && (gastosData[i][6] === true || String(gastosData[i][6]).toUpperCase() === 'TRUE')) {
+    if (
+      String(gastosData[i][1]) === periodoId &&
+      (gastosData[i][6] === true || String(gastosData[i][6]).toUpperCase() === 'TRUE')
+    ) {
       totalGastosPagados += Number(gastosData[i][5]) || 0;
     }
   }
@@ -533,11 +555,9 @@ function recalcularTotalesPeriodo_(periodoId) {
     if (String(periodosData[i][0]) === periodoId) {
       const saldoAnterior = Number(periodosData[i][3]) || 0;
       const saldoCierre = saldoAnterior + totalIngresosRecaudados - totalGastosPagados;
-      periodosSheet.getRange(i + 1, 5, 1, 3).setValues([[
-        totalIngresosRecaudados,
-        totalGastosPagados,
-        saldoCierre
-      ]]);
+      periodosSheet
+        .getRange(i + 1, 5, 1, 3)
+        .setValues([[totalIngresosRecaudados, totalGastosPagados, saldoCierre]]);
       break;
     }
   }
@@ -550,8 +570,18 @@ function recalcularTotalesPeriodo_(periodoId) {
 function formatMesAnio_(val) {
   if (val instanceof Date && !isNaN(val)) {
     const meses = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre',
     ];
     return `${meses[val.getMonth()]} ${val.getFullYear()}`;
   }
@@ -586,7 +616,7 @@ function getDetallePeriodo(periodoId) {
         nombre: String(r[3]),
         monto: Number(r[4]) || 0,
         pagado: r[5] === true || String(r[5]).toUpperCase() === 'TRUE',
-        fechaPago: formatFechaCorta_(r[6])
+        fechaPago: formatFechaCorta_(r[6]),
       });
     }
   }
@@ -602,7 +632,7 @@ function getDetallePeriodo(periodoId) {
         descripcion: String(r[4]),
         monto: Number(r[5]) || 0,
         pagado: r[6] === true || String(r[6]).toUpperCase() === 'TRUE',
-        fechaPago: formatFechaCorta_(r[7])
+        fechaPago: formatFechaCorta_(r[7]),
       });
     }
   }
@@ -618,205 +648,675 @@ function getDetallePeriodo(periodoId) {
 function cargarHistorico2026() {
   const historico2026 = [
     {
-      id: 'PER-2026-01', mesAnio: 'Enero 2026', responsableId: 'INT-05',
-      saldoAnterior: 411.60, totalIngresos: 475.00, totalGastos: 461.75, saldoCierre: 424.85,
+      id: 'PER-2026-01',
+      mesAnio: 'Enero 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 411.6,
+      totalIngresos: 475.0,
+      totalGastos: 461.75,
+      saldoCierre: 424.85,
       fechaCierre: '01/02/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 120.00, pagado: true, fechaPago: '31/01/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/01/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 120.00, pagado: true, fechaPago: '31/01/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 65.00,  pagado: true, fechaPago: '31/01/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/01/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 120.0, pagado: true, fechaPago: '31/01/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/01/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 120.0, pagado: true, fechaPago: '31/01/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 65.0, pagado: true, fechaPago: '31/01/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/01/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 65.35,  pagado: true, fechaPago: '01/02/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 214.00, pagado: true, fechaPago: '01/02/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 55.20,  pagado: true, fechaPago: '01/02/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '01/02/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 2.50,   pagado: true, fechaPago: '01/02/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 5.80,   pagado: true, fechaPago: '01/02/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 65.35,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 214.0,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 55.2,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 2.5,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 5.8,
+          pagado: true,
+          fechaPago: '01/02/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-02', mesAnio: 'Febrero 2026', responsableId: 'INT-05',
-      saldoAnterior: 424.85, totalIngresos: 455.00, totalGastos: 432.30, saldoCierre: 447.55,
+      id: 'PER-2026-02',
+      mesAnio: 'Febrero 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 424.85,
+      totalIngresos: 455.0,
+      totalGastos: 432.3,
+      saldoCierre: 447.55,
       fechaCierre: '13/03/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '28/02/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '28/02/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '28/02/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 65.00,  pagado: true, fechaPago: '28/02/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '28/02/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '28/02/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '28/02/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '28/02/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 65.0, pagado: true, fechaPago: '28/02/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '28/02/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 58.40,  pagado: true, fechaPago: '13/03/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 178.00, pagado: true, fechaPago: '13/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 67.00,  pagado: true, fechaPago: '13/03/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '11/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 2.50,   pagado: true, fechaPago: '13/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.50,   pagado: true, fechaPago: '13/03/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 58.4,
+          pagado: true,
+          fechaPago: '13/03/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 178.0,
+          pagado: true,
+          fechaPago: '13/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 67.0,
+          pagado: true,
+          fechaPago: '13/03/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '11/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 2.5,
+          pagado: true,
+          fechaPago: '13/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.5,
+          pagado: true,
+          fechaPago: '13/03/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-03', mesAnio: 'Marzo 2026', responsableId: 'INT-05',
-      saldoAnterior: 447.55, totalIngresos: 450.00, totalGastos: 373.78, saldoCierre: 523.77,
+      id: 'PER-2026-03',
+      mesAnio: 'Marzo 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 447.55,
+      totalIngresos: 450.0,
+      totalGastos: 373.78,
+      saldoCierre: 523.77,
       fechaCierre: '31/03/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '31/03/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/03/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '31/03/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 60.00,  pagado: true, fechaPago: '31/03/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/03/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '31/03/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/03/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '31/03/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 60.0, pagado: true, fechaPago: '31/03/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/03/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 53.90,  pagado: true, fechaPago: '31/03/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 162.50, pagado: true, fechaPago: '31/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 23.90,  pagado: true, fechaPago: '31/03/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 123.48, pagado: true, fechaPago: '31/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 2.50,   pagado: true, fechaPago: '31/03/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.50,   pagado: true, fechaPago: '31/03/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 53.9,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 162.5,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 23.9,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 123.48,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 2.5,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.5,
+          pagado: true,
+          fechaPago: '31/03/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-04', mesAnio: 'Abril 2026', responsableId: 'INT-05',
-      saldoAnterior: 523.77, totalIngresos: 450.00, totalGastos: 398.20, saldoCierre: 580.57,
+      id: 'PER-2026-04',
+      mesAnio: 'Abril 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 523.77,
+      totalIngresos: 450.0,
+      totalGastos: 398.2,
+      saldoCierre: 580.57,
       fechaCierre: '30/04/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '30/04/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '30/04/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '30/04/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 60.00,  pagado: true, fechaPago: '30/04/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '30/04/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '30/04/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '30/04/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '30/04/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 60.0, pagado: true, fechaPago: '30/04/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '30/04/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 50.10,  pagado: true, fechaPago: '30/04/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 170.50, pagado: true, fechaPago: '30/04/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 49.80,  pagado: true, fechaPago: '30/04/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '30/04/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 2.50,   pagado: true, fechaPago: '30/04/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 6.40,   pagado: true, fechaPago: '30/04/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 50.1,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 170.5,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 49.8,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 2.5,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 6.4,
+          pagado: true,
+          fechaPago: '30/04/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-05', mesAnio: 'Mayo 2026', responsableId: 'INT-05',
-      saldoAnterior: 580.57, totalIngresos: 450.00, totalGastos: 419.40, saldoCierre: 611.17,
+      id: 'PER-2026-05',
+      mesAnio: 'Mayo 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 580.57,
+      totalIngresos: 450.0,
+      totalGastos: 419.4,
+      saldoCierre: 611.17,
       fechaCierre: '31/05/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '31/05/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/05/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '31/05/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 60.00,  pagado: true, fechaPago: '31/05/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/05/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '31/05/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/05/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '31/05/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 60.0, pagado: true, fechaPago: '31/05/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/05/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 66.80,  pagado: true, fechaPago: '31/05/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 171.00, pagado: true, fechaPago: '31/05/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 50.70,  pagado: true, fechaPago: '31/05/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '31/05/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 4.50,   pagado: true, fechaPago: '31/05/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.50,   pagado: true, fechaPago: '31/05/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 66.8,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 171.0,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 50.7,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 4.5,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.5,
+          pagado: true,
+          fechaPago: '31/05/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-06', mesAnio: 'Junio 2026', responsableId: 'INT-05',
-      saldoAnterior: 611.17, totalIngresos: 450.00, totalGastos: 458.20, saldoCierre: 602.97,
+      id: 'PER-2026-06',
+      mesAnio: 'Junio 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 611.17,
+      totalIngresos: 450.0,
+      totalGastos: 458.2,
+      saldoCierre: 602.97,
       fechaCierre: '30/06/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '30/06/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '30/06/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '30/06/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 60.00,  pagado: true, fechaPago: '30/06/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '30/06/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '30/06/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '30/06/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '30/06/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 60.0, pagado: true, fechaPago: '30/06/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '30/06/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 121.60, pagado: true, fechaPago: '30/06/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 158.50, pagado: true, fechaPago: '30/06/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 48.80,  pagado: true, fechaPago: '30/06/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '30/06/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 3.20,   pagado: true, fechaPago: '30/06/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.20,   pagado: true, fechaPago: '30/06/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 121.6,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 158.5,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 48.8,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 3.2,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.2,
+          pagado: true,
+          fechaPago: '30/06/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-07', mesAnio: 'Julio 2026', responsableId: 'INT-05',
-      saldoAnterior: 602.97, totalIngresos: 455.00, totalGastos: 445.10, saldoCierre: 612.87,
+      id: 'PER-2026-07',
+      mesAnio: 'Julio 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 602.97,
+      totalIngresos: 455.0,
+      totalGastos: 445.1,
+      saldoCierre: 612.87,
       fechaCierre: '31/07/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '31/07/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/07/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '31/07/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 65.00,  pagado: true, fechaPago: '31/07/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/07/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '31/07/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/07/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '31/07/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 65.0, pagado: true, fechaPago: '31/07/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/07/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 71.20,  pagado: true, fechaPago: '31/07/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 180.00, pagado: true, fechaPago: '31/07/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 67.90,  pagado: true, fechaPago: '31/07/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '31/07/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 3.30,   pagado: true, fechaPago: '31/07/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 3.80,   pagado: true, fechaPago: '31/07/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 71.2,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 180.0,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 67.9,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 3.3,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 3.8,
+          pagado: true,
+          fechaPago: '31/07/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-08', mesAnio: 'Agosto 2026', responsableId: 'INT-05',
-      saldoAnterior: 612.87, totalIngresos: 455.00, totalGastos: 502.10, saldoCierre: 565.77,
+      id: 'PER-2026-08',
+      mesAnio: 'Agosto 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 612.87,
+      totalIngresos: 455.0,
+      totalGastos: 502.1,
+      saldoCierre: 565.77,
       fechaCierre: '31/08/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '31/08/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/08/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '31/08/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 65.00,  pagado: true, fechaPago: '31/08/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/08/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '31/08/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/08/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '31/08/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 65.0, pagado: true, fechaPago: '31/08/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/08/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 71.00,  pagado: true, fechaPago: '31/08/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 242.50, pagado: true, fechaPago: '31/08/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 62.70,  pagado: true, fechaPago: '31/08/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '31/08/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 3.20,   pagado: true, fechaPago: '31/08/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 3.80,   pagado: true, fechaPago: '31/08/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 71.0,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 242.5,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 62.7,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 3.2,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 3.8,
+          pagado: true,
+          fechaPago: '31/08/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-09', mesAnio: 'Septiembre 2026', responsableId: 'INT-05',
-      saldoAnterior: 565.77, totalIngresos: 450.00, totalGastos: 447.90, saldoCierre: 567.87,
+      id: 'PER-2026-09',
+      mesAnio: 'Septiembre 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 565.77,
+      totalIngresos: 450.0,
+      totalGastos: 447.9,
+      saldoCierre: 567.87,
       fechaCierre: '30/09/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '30/09/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '30/09/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '30/09/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 60.00,  pagado: true, fechaPago: '30/09/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '30/09/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '30/09/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '30/09/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '30/09/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 60.0, pagado: true, fechaPago: '30/09/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '30/09/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 58.50,  pagado: true, fechaPago: '30/09/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 195.50, pagado: true, fechaPago: '30/09/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 64.60,  pagado: true, fechaPago: '30/09/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '30/09/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 3.20,   pagado: true, fechaPago: '30/09/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.20,   pagado: true, fechaPago: '30/09/2026' }
-      ]
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 58.5,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 195.5,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 64.6,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 3.2,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.2,
+          pagado: true,
+          fechaPago: '30/09/2026',
+        },
+      ],
     },
     {
-      id: 'PER-2026-10', mesAnio: 'Octubre 2026', responsableId: 'INT-05',
-      saldoAnterior: 567.87, totalIngresos: 455.00, totalGastos: 413.60, saldoCierre: 609.27,
+      id: 'PER-2026-10',
+      mesAnio: 'Octubre 2026',
+      responsableId: 'INT-05',
+      saldoAnterior: 567.87,
+      totalIngresos: 455.0,
+      totalGastos: 413.6,
+      saldoCierre: 609.27,
       fechaCierre: '31/10/2026',
       cuotas: [
-        { intId: 'INT-03', nombre: 'Evelin',  monto: 110.00, pagado: true, fechaPago: '31/10/2026' },
-        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.00,   pagado: true, fechaPago: '31/10/2026' },
-        { intId: 'INT-05', nombre: 'Fermat',  monto: 110.00, pagado: true, fechaPago: '31/10/2026' },
-        { intId: 'INT-02', nombre: 'Judith',  monto: 65.00,  pagado: true, fechaPago: '31/10/2026' },
-        { intId: 'INT-01', nombre: 'Jose',    monto: 170.00, pagado: true, fechaPago: '31/10/2026' }
+        { intId: 'INT-03', nombre: 'Evelin', monto: 110.0, pagado: true, fechaPago: '31/10/2026' },
+        { intId: 'INT-04', nombre: 'Nathaly', monto: 0.0, pagado: true, fechaPago: '31/10/2026' },
+        { intId: 'INT-05', nombre: 'Fermat', monto: 110.0, pagado: true, fechaPago: '31/10/2026' },
+        { intId: 'INT-02', nombre: 'Judith', monto: 65.0, pagado: true, fechaPago: '31/10/2026' },
+        { intId: 'INT-01', nombre: 'Jose', monto: 170.0, pagado: true, fechaPago: '31/10/2026' },
       ],
       gastos: [
-        { cat: 'Agua',     sub: 'Sedapal', desc: 'Recibo Sedapal (5021421)',  monto: 62.60,  pagado: true, fechaPago: '31/10/2026' },
-        { cat: 'Luz',      sub: 'Enel',    desc: 'Pluz Energía (1069216)',    monto: 174.00, pagado: true, fechaPago: '31/10/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 1 (268988)', monto: 47.70,  pagado: true, fechaPago: '31/10/2026' },
-        { cat: 'Internet', sub: 'Win',     desc: 'Fibra Óptica Win (328111)', monto: 118.90, pagado: true, fechaPago: '31/10/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 4 (270026)', monto: 3.20,   pagado: true, fechaPago: '31/10/2026' },
-        { cat: 'Gas',      sub: 'Cálidda', desc: 'Cálidda - Piso 3 (270116)', monto: 7.20,   pagado: true, fechaPago: '31/10/2026' }
-      ]
-    }
+        {
+          cat: 'Agua',
+          sub: 'Sedapal',
+          desc: 'Recibo Sedapal (5021421)',
+          monto: 62.6,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+        {
+          cat: 'Luz',
+          sub: 'Enel',
+          desc: 'Pluz Energía (1069216)',
+          monto: 174.0,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 1 (268988)',
+          monto: 47.7,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+        {
+          cat: 'Internet',
+          sub: 'Win',
+          desc: 'Fibra Óptica Win (328111)',
+          monto: 118.9,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 4 (270026)',
+          monto: 3.2,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+        {
+          cat: 'Gas',
+          sub: 'Cálidda',
+          desc: 'Cálidda - Piso 3 (270116)',
+          monto: 7.2,
+          pagado: true,
+          fechaPago: '31/10/2026',
+        },
+      ],
+    },
   ];
 
   importarPeriodosHistoricos_(historico2026);
@@ -836,7 +1336,7 @@ function importarPeriodosHistoricos_(listaPeriodos) {
     const cuotasSheet = ss.getSheetByName('Cuotas');
     const gastosSheet = ss.getSheetByName('Gastos');
 
-    const idsImportar = new Set(listaPeriodos.map(p => String(p.id)));
+    const idsImportar = new Set(listaPeriodos.map((p) => String(p.id)));
 
     // 1. Limpiar registros previos con los mismos IDs para evitar duplicados
     const filtrarFilas = (sheet, colIndex) => {
@@ -860,7 +1360,7 @@ function importarPeriodosHistoricos_(listaPeriodos) {
     const nuevasCuotas = [];
     const nuevosGastos = [];
 
-    listaPeriodos.forEach(p => {
+    listaPeriodos.forEach((p) => {
       const codeMes = p.id.replace('PER-', '').replace('-', '');
       nuevasPeriodos.push([
         p.id,
@@ -871,7 +1371,7 @@ function importarPeriodosHistoricos_(listaPeriodos) {
         Number(p.totalGastos),
         Number(p.saldoCierre),
         'CERRADO',
-        "'" + p.fechaCierre
+        "'" + p.fechaCierre,
       ]);
 
       p.cuotas.forEach((c, idx) => {
@@ -882,7 +1382,7 @@ function importarPeriodosHistoricos_(listaPeriodos) {
           c.nombre,
           Number(c.monto),
           Boolean(c.pagado),
-          c.fechaPago ? "'" + c.fechaPago : ''
+          c.fechaPago ? "'" + c.fechaPago : '',
         ]);
       });
 
@@ -895,7 +1395,7 @@ function importarPeriodosHistoricos_(listaPeriodos) {
           g.desc,
           Number(g.monto),
           Boolean(g.pagado),
-          g.fechaPago ? "'" + g.fechaPago : ''
+          g.fechaPago ? "'" + g.fechaPago : '',
         ]);
       });
     });
@@ -921,8 +1421,10 @@ function importarPeriodosHistoricos_(listaPeriodos) {
       sheet.clearContents();
       sheet.getRange(1, 1, filas.length, filas[0].length).setValues(filas);
       if (filas.length > 1) {
-        monedaCols.forEach(colRange => {
-          sheet.getRange(`${colRange}2:${colRange}${filas.length}`).setNumberFormat('"S/ "#,##0.00');
+        monedaCols.forEach((colRange) => {
+          sheet
+            .getRange(`${colRange}2:${colRange}${filas.length}`)
+            .setNumberFormat('"S/ "#,##0.00');
         });
       }
     };
@@ -932,10 +1434,12 @@ function importarPeriodosHistoricos_(listaPeriodos) {
     reescribirHoja(gastosSheet, gConservados.concat(nuevosGastos), ['F']);
 
     // Recalcular totales del periodo abierto por si ya tenía movimientos registrados
-    const abierto = pBody.find(r => String(r[7]) === 'ABIERTO');
+    const abierto = pBody.find((r) => String(r[7]) === 'ABIERTO');
     if (abierto) recalcularTotalesPeriodo_(String(abierto[0]));
 
-    Logger.log(`Importación completada: ${listaPeriodos.length} periodos históricos cargados. Pozo actual heredado: S/ ${ultimoSaldoCierre.toFixed(2)}`);
+    Logger.log(
+      `Importación completada: ${listaPeriodos.length} periodos históricos cargados. Pozo actual heredado: S/ ${ultimoSaldoCierre.toFixed(2)}`
+    );
   } finally {
     lock.releaseLock();
   }
@@ -967,20 +1471,20 @@ function getAnaliticaData() {
       totalIngresos: Number(r[4]) || 0,
       totalGastos: Number(r[5]) || 0,
       saldoCierre: Number(r[6]) || 0,
-      estado: String(r[7])
+      estado: String(r[7]),
     });
   }
   periodos.sort((a, b) => a.id.localeCompare(b.id));
 
-  const periodosConGasto = periodos.filter(p => p.totalGastos > 0);
-  const idsValidos = new Set(periodosConGasto.map(p => p.id));
+  const periodosConGasto = periodos.filter((p) => p.totalGastos > 0);
+  const idsValidos = new Set(periodosConGasto.map((p) => p.id));
 
   // Inicializar matriz mes x servicio
   const seriesPorServicio = {
     'Luz (Enel)': {},
     'Agua (Sedapal)': {},
     'Internet (Win)': {},
-    'Gas (Total 4 Pisos)': {}
+    'Gas (Total 4 Pisos)': {},
   };
 
   // 2. Agrupar gastos por categoría, piso y mes
@@ -994,12 +1498,13 @@ function getAnaliticaData() {
 
     const cat = String(r[2]);
     const desc = String(r[4]);
-    let clave = cat;
+    let clave;
 
     if (cat === 'Gas') {
       const matchPiso = desc.match(/Piso\s*\d+/i);
       clave = matchPiso ? `Gas (${matchPiso[0]})` : 'Gas Cálidda';
-      seriesPorServicio['Gas (Total 4 Pisos)'][pId] = (seriesPorServicio['Gas (Total 4 Pisos)'][pId] || 0) + monto;
+      seriesPorServicio['Gas (Total 4 Pisos)'][pId] =
+        (seriesPorServicio['Gas (Total 4 Pisos)'][pId] || 0) + monto;
     } else if (cat === 'Luz') {
       clave = 'Luz (Enel)';
     } else if (cat === 'Agua') {
@@ -1022,23 +1527,25 @@ function getAnaliticaData() {
 
   // Convertir mapas por periodo a arreglos alineados con periodosConGasto
   const seriesAlineadas = {};
-  Object.keys(seriesPorServicio).forEach(srv => {
-    const valores = periodosConGasto.map(p => Number((seriesPorServicio[srv][p.id] || 0).toFixed(2)));
-    const activos = valores.filter(v => v > 0);
+  Object.keys(seriesPorServicio).forEach((srv) => {
+    const valores = periodosConGasto.map((p) =>
+      Number((seriesPorServicio[srv][p.id] || 0).toFixed(2))
+    );
+    const activos = valores.filter((v) => v > 0);
     const suma = activos.reduce((a, b) => a + b, 0);
     seriesAlineadas[srv] = {
       valores,
       promedio: activos.length > 0 ? Number((suma / activos.length).toFixed(2)) : 0,
       minimo: activos.length > 0 ? Math.min(...activos) : 0,
-      maximo: activos.length > 0 ? Math.max(...activos) : 0
+      maximo: activos.length > 0 ? Math.max(...activos) : 0,
     };
   });
 
   const serviciosLista = Object.values(porServicio)
-    .map(s => ({
+    .map((s) => ({
       nombre: s.nombre,
       total: Number(s.total.toFixed(2)),
-      promedio: Number((s.total / Math.max(1, periodosConGasto.length)).toFixed(2))
+      promedio: Number((s.total / Math.max(1, periodosConGasto.length)).toFixed(2)),
     }))
     .sort((a, b) => b.total - a.total);
 
@@ -1059,29 +1566,30 @@ function getAnaliticaData() {
   }
 
   const integrantesLista = Object.values(porIntegrante)
-    .map(m => ({
+    .map((m) => ({
       nombre: m.nombre,
       total: Number(m.total.toFixed(2)),
-      aportes: m.aportes
+      aportes: m.aportes,
     }))
     .sort((a, b) => b.total - a.total);
 
   // 4. KPIs globales
   const totalGastadoHistorico = periodosConGasto.reduce((acc, p) => acc + p.totalGastos, 0);
-  const promedioGastoMensual = periodosConGasto.length > 0
-    ? totalGastadoHistorico / periodosConGasto.length
-    : 0;
+  const promedioGastoMensual =
+    periodosConGasto.length > 0 ? totalGastadoHistorico / periodosConGasto.length : 0;
 
-  return JSON.parse(JSON.stringify({
-    serieMensual: periodos,
-    mesesValidosLabels: periodosConGasto.map(p => p.mesAnio.split(' ')[0].substring(0, 3)),
-    seriesPorServicio: seriesAlineadas,
-    servicios: serviciosLista,
-    integrantes: integrantesLista,
-    kpis: {
-      mesesAnalizados: periodosConGasto.length,
-      totalGastado: Number(totalGastadoHistorico.toFixed(2)),
-      promedioMensual: Number(promedioGastoMensual.toFixed(2))
-    }
-  }));
+  return JSON.parse(
+    JSON.stringify({
+      serieMensual: periodos,
+      mesesValidosLabels: periodosConGasto.map((p) => p.mesAnio.split(' ')[0].substring(0, 3)),
+      seriesPorServicio: seriesAlineadas,
+      servicios: serviciosLista,
+      integrantes: integrantesLista,
+      kpis: {
+        mesesAnalizados: periodosConGasto.length,
+        totalGastado: Number(totalGastadoHistorico.toFixed(2)),
+        promedioMensual: Number(promedioGastoMensual.toFixed(2)),
+      },
+    })
+  );
 }
