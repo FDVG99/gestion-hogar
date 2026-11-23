@@ -139,8 +139,15 @@ function setupDatabase() {
     Logger.log('Base de datos inicializada correctamente.');
     return { success: true, message: 'Base de datos creada e inicializada correctamente.' };
   } catch (error) {
-    Logger.log('Error en setupDatabase: ' + error.message);
-    throw error;
+    const mensajeError = error && error.message ? error.message : String(error);
+
+    Logger.log('Error en setupDatabase: ' + mensajeError);
+
+    const errorContextual = new Error('No se pudo inicializar la base de datos: ' + mensajeError);
+
+    errorContextual.cause = error;
+
+    throw errorContextual;
   } finally {
     lock.releaseLock();
   }
